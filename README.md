@@ -4,6 +4,7 @@
 ## BACKGROUND
 These codes will help you reproduce all plots and statistical analyses of the publication.  
 
+
 ## USEFUL LINKS
 The [codes](https://version.helsinki.fi/hus_hematology/tcga-kirc-immunology) to reproduce the texture and lymphocyte data.  
 The annotated image data are located in [Zenodo](https://zenodo.org/deposit/6384627).  
@@ -28,3 +29,6 @@ The [TissUUmaps platform](http://hruh-20.it.helsinki.fi/rcc_texture_lymphocytes/
 4. Run the analyses at once by running `Rscript src/main.R`. This will
 - preprocess data files found in `./data/`
 - produce tables and images in `./src/path/Images/`
+
+
+A detailed description of  the R and library versions can be found in `session_info.yaml`.
