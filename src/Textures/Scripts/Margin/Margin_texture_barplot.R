@@ -1,3 +1,7 @@
+rm(list=ls())
+
+print("Start Textures/Scripts/Margin/Margin_texture_barplot.R")
+
 # Load libraries
 library(jsonlite)
 library(readxl)
@@ -13,8 +17,8 @@ library(RColorBrewer)
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
@@ -28,7 +32,6 @@ tcga_kirc$`margin_texture_other_%` <- 100*tcga_kirc$margin_texture_other / (tcga
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
   dplyr::filter(`margin_texture_normal_%` > 1) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
@@ -40,9 +43,6 @@ tcga_kirc <- tcga_kirc %>%
 colnames(tcga_kirc)[grep(pattern = "^margin_texture_[[:print:]]*%", colnames(tcga_kirc))] <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
 textures <- c("Blood", "Normal", "Stroma", "Other")
 
-# Factor IDs
-# tcga_kirc <- tcga_kirc %>% arrange(Cancer) %>% dplyr::mutate(tcga_id = factor(tcga_id))
-# tcga_kirc <- tcga_kirc %>% mutate(tcga_id = factor(Cancer, levels = Cancer))
 
 # Melt longer
 tcga_kirc_long <- tcga_kirc %>%
@@ -60,7 +60,7 @@ tcga_kirc_long <- tcga_kirc_long %>%
   dplyr::right_join(tcga_kirc_long)
 
 # Plot
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/TCGA_margin_texture_barplot.png", width = 18, height = 5, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Textures/Images/Margin/TCGA_margin_texture_barplot.png", width = 18, height = 5, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 ggplot(tcga_kirc_long, aes(x = reorder(ID, -orderid), y = value, fill = Texture)) +
   geom_bar(stat = "identity") +
   labs(y="Proportion (%)") +
@@ -89,7 +89,7 @@ pairwise.test = tcga_kirc_long %>%
 
 a <- max(tcga_kirc_long$value)
 
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/TCGA_margin_texture_scatterplot.png", width = 6, height = 6, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Textures/Images/Margin/TCGA_margin_texture_scatterplot.png", width = 6, height = 6, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 ggplot(tcga_kirc_long, aes(x = Texture, y = value)) +
   geom_jitter(size=5, width = 0.2, aes(fill=Texture), shape = 21, color = "black") +
   geom_boxplot(outlier.shape = NA, alpha = 0.5) + 

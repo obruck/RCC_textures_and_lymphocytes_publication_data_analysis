@@ -1,3 +1,7 @@
+rm(list=ls())
+
+print("Start Clinical_center/Scripts/Clinical_center_texture.R")
+
 # Load libraries
 library(jsonlite)
 library(readxl)
@@ -9,12 +13,12 @@ library(circlize)
 library(RColorBrewer)
 
 
-
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
+
 
 # Normalize by removing empty
 tcga_kirc$`texture_blood_%` <- 100*tcga_kirc$texture_blood / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
@@ -23,14 +27,14 @@ tcga_kirc$`texture_normal_%` <- 100*tcga_kirc$texture_normal / (tcga_kirc$textur
 tcga_kirc$`texture_stroma_%` <- 100*tcga_kirc$texture_stroma / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 tcga_kirc$`texture_other_%` <- 100*tcga_kirc$texture_other / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 
+
+# Add TCGA id
 tcga_kirc <- tcga_kirc %>%
-  dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
 # TCGA clinical sources
-clinical_sources <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/TCGA_source_sites.xlsx")
+clinical_sources <- read_xlsx("../data/TCGA_source_sites.xlsx")
 
 
 ############################# JOIN ##########################################################################################################
@@ -77,7 +81,7 @@ for (texture in textures) {
   #                                a3*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE), a4*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE)),
   #                    size = 6)
   ggsave(plot = g,
-         filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Clinical_center/Images/TCGA_texture_", texture, ".png"),
+         filename = paste0("Clinical_center/Images/TCGA_texture_", texture, ".png"),
          width = 7, height = 7,
          units = "in",
          dpi = 300)
@@ -89,7 +93,6 @@ for (texture in textures) {
 # a <- tcga_kirc %>% dplyr::group_by(ClinicalCenter) %>% summarise(n = n()) %>% filter(n>=5)
 tcga_kirc_hm <- tcga_kirc %>%
   dplyr::select("ClinicalCenter", "Blood", "Cancer", "Normal", "Stroma", "Other") %>%
-  # dplyr::filter(ClinicalCenter %in% a$ClinicalCenter) %>%
   dplyr::group_by(ClinicalCenter) %>%
   summarise_all(
     funs(median(.))
@@ -106,19 +109,7 @@ anno <- data.frame(Center=tcga_kirc_hm$ClinicalCenter)
 ## Paired colors
 #a6cee3, #1f78b4, #b2df8a, #33a02c, #fb9a99, #e31a1c, #fdbf6f, #ff7f00, #cab2d6, #6a3d9a
 
-## Annotation colors 
-# col_anno1 = list(Center = c(
-#   "Christiana Healthcare"="#66a61e",
-#   "Cureline" = "#d95f02",
-#   "Harvard" = "#e7298a",
-#   "International Genomics Consortium"="#1b9e77",
-#   "MD Anderson Cancer Center" = "#666666",
-#   "MSKCC"="#a6761d",
-#   "NCI Urologic Oncology Branch"="#000000",
-#   "UNC" = "#e6ab02",
-#   "Fox Chase" = "#d95f02",
-#   "University of Pittsburgh"="#7570b3"))
-# col_anno = list(Center = structure(brewer.pal(length(unique(anno$Center)), "Paired"),
+## Annotation colors
 mycolors <- colorRampPalette(brewer.pal(8, "Set1"))(length(unique(anno$Center)))
 col_anno1 = list(Center = structure(mycolors))
 col_anno1 <- setNames(object = col_anno1$Center, nm = unique(anno$Center))
@@ -165,7 +156,7 @@ tcga_kirc_hm1[is.nan(tcga_kirc_hm1)] <- NA
 
 
 # Plot
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Clinical_center/Images/TCGA_texture_heatmap.png", width = 7, height = 4, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Clinical_center/Images/TCGA_texture_heatmap.png", width = 7, height = 4, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 # Heatmap(t(tcga_kirc_hm1),
 g <- Heatmap(t(tcga_kirc_hm1),
              top_annotation = hm_anno,

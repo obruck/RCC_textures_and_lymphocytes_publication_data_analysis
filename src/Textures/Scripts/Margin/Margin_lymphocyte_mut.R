@@ -1,5 +1,7 @@
 rm(list=ls())
 
+print("Start Textures/Scripts/Margin/Margin_lymphocyte_mut.R")
+
 # Load libraries
 library(readxl)
 library(tidyverse)
@@ -14,8 +16,8 @@ library(RColorBrewer)
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
@@ -28,8 +30,6 @@ tcga_kirc$`margin_texture_other_%` <- 100*tcga_kirc$margin_texture_other / (tcga
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  # dplyr::filter(`texture_normal_%` > 1) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 tcga_kirc0 <- tcga_kirc
 
@@ -47,10 +47,6 @@ nonmargin <- c("NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMa
 # To percent
 tcga_kirc[margin] <- sapply(tcga_kirc[margin], function(x) 100*x)
 tcga_kirc[nonmargin] <- sapply(tcga_kirc[nonmargin], function(x) 100*x)
-
-# Factor IDs
-# tcga_kirc <- tcga_kirc %>% arrange(Cancer) %>% dplyr::mutate(tcga_id = factor(tcga_id))
-# tcga_kirc <- tcga_kirc %>% mutate(tcga_id = factor(Cancer, levels = Cancer))
 
 # Melt longer
 tcga_kirc_long <- tcga_kirc %>%
@@ -77,7 +73,7 @@ pairwise.test = tcga_kirc_long %>%
 
 
 # Plot
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/TCGA_margin_Ly_scatterplot.png", width = 6, height = 6, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Textures/Images/Margin/TCGA_margin_Ly_scatterplot.png", width = 6, height = 6, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 ggplot(tcga_kirc_long, aes(x = Margin, y = value, group = variable)) +
   geom_point(size=5, aes(fill=Margin), shape = 21, color = "black", position=position_jitterdodge()) +
   geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
@@ -127,7 +123,7 @@ tcga_kirc_wide <- tcga_kirc_margin %>%
                             ifelse(FC < 0.1, 0.1, FC))))
 
 # Read mutation data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/data_with_ak_mut.xlsx") %>%
+tcga_kirc <- read_xlsx("../data/mutations_final.xlsx") %>%
   janitor::clean_names() %>%
   dplyr::rename(ID = tcga_id)
 ## Join
@@ -216,7 +212,7 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
   
   
   # Export data
-  writexl::write_xlsx(pvalue_df, paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Ly/Mut/Ly_in_margin_vs_nonmargin_", texture1, "_mut.xlsx"))
+  writexl::write_xlsx(pvalue_df, paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Mut/Ly_in_margin_vs_nonmargin_", texture1, "_mut.xlsx"))
   
   
   # Plot parameters
@@ -261,12 +257,6 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
             axis.title.x = element_text(size=14, face="bold", colour = "black"),
             legend.position = "none") +
       scale_fill_brewer(palette = c("Set1")) +
-      # scale_x_discrete(labels=c("0" = "Low", "1" = "High")) +
-      # stat_compare_means(method = "wilcoxon.test",
-      #                    label.y = 1.0*a,
-      #                    label = "p.signif",
-      #                    bracket.size = 1.5,
-      #                    size = 5) +
       stat_pvalue_manual(
         pairwise.test,
         label = "p",
@@ -276,7 +266,7 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
         y.position = 1.05*a
       )
     g
-    ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Ly/Mut/Ly_in_margin_vs_nonmargin_", two1, "_", texture1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
+    ggsave(plot = g, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Mut/Ly_in_margin_vs_nonmargin_", two1, "_", texture1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
     
   }
   

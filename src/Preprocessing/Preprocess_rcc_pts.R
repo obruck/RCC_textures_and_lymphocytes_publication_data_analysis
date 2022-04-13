@@ -1,5 +1,7 @@
 rm(list=ls())
 
+print("Start Preprocessing/Preprocess_rcc_pts.R")
+
 # Libraries
 library(tidyverse)
 library(readxl)
@@ -26,7 +28,7 @@ setwd(getCurrentFileLocation())
 
 # Load data
 ## Images with correct resolution
-tcga_kirc <- read_xlsx("../data/image_analysis_results_before_sample_exclusion.xlsx")
+tcga_kirc <- read_xlsx("../data/raw_data.xlsx")
 
 
 ## Mutation data

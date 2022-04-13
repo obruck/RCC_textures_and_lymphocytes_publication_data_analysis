@@ -1,25 +1,26 @@
 rm(list=ls())
 
+print("Start Ly/Scripts/Ly_mut.R")
+
 # Load libraries
 library(readxl)
 library(tidyverse)
 library(data.table, warn.conflicts = TRUE)
 library(ggplot2)
 library(ggpubr)
+library(janitor)
 library(rstatix)
 library(RColorBrewer)
 library(fastDummies)
 library(survival)
 library(survminer)
 
-dir.create("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Mut")
-
 
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/data_with_ak_mut.xlsx") %>%
+# Image data
+tcga_kirc <- read_xlsx("../data/mutations_final.xlsx") %>%
   janitor::clean_names()
 
 # Normalize by removing empty
@@ -30,7 +31,6 @@ tcga_kirc$inf_bin_lymphocytes_total <- 100*(tcga_kirc$bin_lymphocytes_blood + tc
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(texture_cancer_percent > 5) %>%
   dplyr::filter(texture_normal_percent < 1) %>%
-  dplyr::filter(is.na(poor_quality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
@@ -46,7 +46,6 @@ tcga_kirc0 <- tcga_kirc
 
 # Rename
 colnames(tcga_kirc)[grep(pattern = "^inf_bin_lymphocytes_[[:print:]]*", colnames(tcga_kirc))] <- c("Blood", "Cancer", "Normal", "Stroma", "Other", "Total")
-# textures <- c("Blood", "Cancer", "Normal", "Stroma", "Other", "Total")
 textures <- c("Blood", "Cancer", "Stroma", "Other", "Total")
 
 
@@ -64,7 +63,8 @@ findcolnumber <- function(df, thecolumnname){
 
 
 # Select variables
-tcga_kirc <- tcga_kirc %>% dplyr::select(tcga_id, !!textures, purity, ploidy, contains("cluster"), contains("mutation"))
+tcga_kirc <- tcga_kirc %>%
+  dplyr::select(tcga_id, !!textures, purity, ploidy, contains("cluster"), contains("mutation"))
 
 # Modify data
 tcga_kirc <- tcga_kirc %>% 
@@ -127,7 +127,7 @@ for (texture1 in textures) {
   
   
   # Export data
-  writexl::write_xlsx(pvalue_df, paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Mut/Ly_", texture1, "_mut.xlsx"))
+  writexl::write_xlsx(pvalue_df, paste0("Ly/Images/Mut/Ly_", texture1, "_mut.xlsx"))
   
   
   # Plot parameters
@@ -187,7 +187,7 @@ for (texture1 in textures) {
         y.position = 1.05*a
       )
     g
-    ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Mut/Ly_", two1, "_", texture1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
+    ggsave(plot = g, filename = paste0("Ly/Images/Mut/Ly_", two1, "_", texture1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
     
   }
   

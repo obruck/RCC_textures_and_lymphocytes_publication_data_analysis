@@ -1,3 +1,7 @@
+rm(list=ls())
+
+print("Start Ly/Scripts/Ly_by_sample_normal_proportion.R")
+
 # Load libraries
 library(jsonlite)
 library(readxl)
@@ -9,12 +13,11 @@ library(circlize)
 library(RColorBrewer)
 
 
-
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
@@ -22,7 +25,6 @@ tcga_kirc$Normal <- 100*tcga_kirc$texture_normal / (tcga_kirc$texture_blood + tc
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
@@ -56,7 +58,6 @@ tcga_kirc <- tcga_kirc %>%
   )
 
 # Plot
-dir.create("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Texture_normal")
 for (texture1 in textures) {
   a <- max(tcga_kirc[[texture1]], na.rm=TRUE)
   g <- ggplot(tcga_kirc, aes_string(x = "Normal_Present", y = texture1)) +
@@ -76,6 +77,6 @@ for (texture1 in textures) {
                        label = "p.signif",
                        bracket.size = 1.5,
                        size = 5)
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Texture_normal/Scatter_", texture1, "_normal_status.png"), width = 5, height = 5, units = 'in', dpi = 300, pointsize = 12) #original pointsize = 12
+  ggsave(plot = g, filename = paste0("Ly/Images/Texture_normal/Scatter_", texture1, "_normal_status.png"), width = 5, height = 5, units = 'in', dpi = 300, pointsize = 12) #original pointsize = 12
   
 }

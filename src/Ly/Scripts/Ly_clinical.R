@@ -1,5 +1,7 @@
 rm(list=ls())
 
+print("Start Ly/Scripts/Ly_clinical.R")
+
 # Load libraries
 library(readxl)
 library(tidyverse)
@@ -12,16 +14,12 @@ library(fastDummies)
 library(survival)
 library(survminer)
 
-dir.create("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical")
-dir.create("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/Balloonplot")
-dir.create("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/KM")
-
 
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
@@ -42,7 +40,6 @@ tcga_kirc$inf_bin_lymphocytes_total <- 100*(tcga_kirc$bin_lymphocytes_blood + tc
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
   dplyr::filter(`texture_normal_%` < 1) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
@@ -63,9 +60,8 @@ colnames(tcga_kirc)[grep(pattern = "^inf_bin_lymphocytes_[[:print:]]*", colnames
 textures <- c("Blood", "Cancer", "Stroma", "Other", "Total")
 
 # Petri's data
-df <- readRDS("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/petri/KIRC.fm.rds")
+df <- readRDS("../data/clinical_transcriptome.rds") %>%
 # Filter patients
-df <- df %>%
   dplyr::select(one_of(tcga_kirc$tcga_id))
 
 # Clean clinical data
@@ -347,8 +343,8 @@ for (texture1 in textures) {
   
   
   # Export data
-  dir.create(paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/", texture1))
-  writexl::write_xlsx(pvalue_df, paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/", texture1, "/Ly_", texture1, "_clinical.xlsx"))
+  dir.create(paste0("Ly/Images/Clinical/", texture1))
+  writexl::write_xlsx(pvalue_df, paste0("Ly/Images/Clinical/", texture1, "/Ly_", texture1, "_clinical.xlsx"))
   
   # Filter variables with p_adjusted1 < 0.10
   vars <- pvalue_df %>%
@@ -422,7 +418,7 @@ for (texture1 in textures) {
           # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
           y.position = 1.05*a
         )
-      ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/", texture1, "/Ly_", gsub(">", "", two1), "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
+      ggsave(plot = g, filename = paste0("Ly/Images/Clinical/", texture1, "/Ly_", gsub(">", "", two1), "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
       
     } else if (length(unique(tcga_kirc1$two1)) == 3) {
       
@@ -449,7 +445,7 @@ for (texture1 in textures) {
           # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
           y.position = c(1.0*a, 1.15*a, 1.075*a)
         )
-      ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/", texture1, "/Ly_", gsub(">", "", two1), "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
+      ggsave(plot = g, filename = paste0("Ly/Images/Clinical/", texture1, "/Ly_", gsub(">", "", two1), "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
       
     } else if (length(unique(tcga_kirc1$two1)) == 4) {
       
@@ -476,7 +472,7 @@ for (texture1 in textures) {
           # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
           y.position = c(1.16*a, 1.32*a, 1.40*a, 1.0*a, 1.24*a, 1.08*a)
         )
-      ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/", texture1, "/Ly_", gsub(">", "", two1), "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
+      ggsave(plot = g, filename = paste0("Ly/Images/Clinical/", texture1, "/Ly_", gsub(">", "", two1), "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
       
     }
     
@@ -571,7 +567,7 @@ for (texture1 in textures) {
              font.legend = c(12, "bold", "black"),    #font voi olla esim. "bold" tai "plain"
              legend.labs = c("Low", "Intermediate", "High"),
              size = 1)  # change line size
-  ggsave(plot = print(g), filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/KM/KM_Ly_", texture1, "_.png"), width = 6, height = 6, units = 'in', dpi = 300)
+  ggsave(plot = print(g), filename = paste0("Ly/Images/Clinical/KM/KM_Ly_", texture1, "_.png"), width = 6, height = 6, units = 'in', dpi = 300)
   
 }
 
@@ -590,7 +586,7 @@ tcga_kirc0 <- tcga_kirc
 # Read statistics
 if (exists("pvalue_df0")) {rm(pvalue_df0)}
 for (texture1 in textures) {
-  pvalue_df <- read_xlsx(paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/", texture1, "/Ly_", texture1, "_clinical.xlsx"))
+  pvalue_df <- read_xlsx(paste0("Ly/Images/Clinical/", texture1, "/Ly_", texture1, "_clinical.xlsx"))
   pvalue_df$Texture = texture1
   if (exists("pvalue_df0")) {
     pvalue_df0 <- rbind(pvalue_df0, pvalue_df)
@@ -692,7 +688,7 @@ for (unique_value_name in 1:length(list(unique_values_0, unique_values_1))) {
           legend.title = element_text(size=12, colour="black", face="bold"))
   p
   
-  ggsave(plot = p, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Clinical/Balloonplot/Balloonplot_Ly_", unique_value_name, ".png"), width = 5, height = nrow(pvalue_df1)/25, units = 'in', dpi = 300)
+  ggsave(plot = p, filename = paste0("Ly/Images/Clinical/Balloonplot/Balloonplot_Ly_", unique_value_name, ".png"), width = 5, height = nrow(pvalue_df1)/25, units = 'in', dpi = 300)
   
 }
 

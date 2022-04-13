@@ -1,3 +1,7 @@
+rm(list=ls())
+
+print("Start Clinical_center/Scripts/Clinical_center_lymphocyte.R")
+
 # Load libraries
 library(jsonlite)
 library(readxl)
@@ -8,25 +12,25 @@ library(ComplexHeatmap)
 library(circlize)
 library(RColorBrewer)
 
-sessionInfo()
 
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
+
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 
+
+# Add TCGA id
 tcga_kirc <- tcga_kirc %>%
-  dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
 # TCGA clinical sources
-clinical_sources <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/TCGA_source_sites.xlsx")
+clinical_sources <- read_xlsx("../data/TCGA_source_sites.xlsx")
 
 
 ############################# JOIN ##########################################################################################################
@@ -71,18 +75,8 @@ for (texture in textures) {
                        label.x = 4.75,
                        # label.y = a5,
                        size = 5)
-  # g <- ggplot_build(g)
-  # unique(g$data[[1]]["fill"])
-  # stat_compare_means(method = "wilcox.test",
-  #                    # label = "p.signif",
-  #                    comparisons = my_comparisons,
-  #                    # label.y = c(1.13*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE), 1.10*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE),
-  #                    #             1.07*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE), 1.04*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE)),
-  #                    label.y = c(a1*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE), a2*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE),
-  #                                a3*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE), a4*max(panels_prop_merged_modified2$hlaabc, na.rm = TRUE)),
-  #                    size = 6)
   ggsave(plot = g,
-         filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Clinical_center/Images/TCGA_ly_", texture, ".png"),
+         filename = paste0("Clinical_center/Images/TCGA_ly_", texture, ".png"),
          width = 7, height = 7,
          units = "in",
          dpi = 300)
@@ -96,10 +90,8 @@ for (texture in textures) {
 
 
 # Heatmap
-# a <- tcga_kirc %>% dplyr::group_by(ClinicalCenter) %>% summarise(n = n()) %>% filter(n>=5)
 tcga_kirc_hm <- tcga_kirc %>%
-  dplyr::select("ClinicalCenter", "Blood", "Cancer", "Normal", "Stroma", "Other") %>%
-  # dplyr::filter(ClinicalCenter %in% a$ClinicalCenter) %>%
+  dplyr::select("ClinicalCenter", "Ly_Blood", "Ly_Cancer", "Ly_Normal", "Ly_Stroma", "Ly_Other") %>%
   dplyr::group_by(ClinicalCenter) %>%
   summarise_all(
     funs(median(.))
@@ -109,29 +101,11 @@ tcga_kirc_hm <- tcga_kirc %>%
 # Annotation data
 anno <- data.frame(Center=tcga_kirc_hm$ClinicalCenter)
 
-## Dark2 colors
-### #1b9e77 green #d95f02 orange #7570b3 violet #e7298a pink #66a61e light green #e6ab02 yellow #a6761d brown #666666 grey
-## Set1 colors
-### #e41a1c #377eb8 #4daf4a #984ea3 #ff7f00 #ffff33 #a65628 #f781bf #999999
-## Paired colors
-#a6cee3, #1f78b4, #b2df8a, #33a02c, #fb9a99, #e31a1c, #fdbf6f, #ff7f00, #cab2d6, #6a3d9a
-
 ## Annotation colors 
-# col_anno = list(Center = c(
-#   "Christiana Healthcare"="#66a61e",
-#   "Cureline" = "#d95f02",
-#   "Harvard" = "#e7298a",
-#   "International Genomics Consortium"="#1b9e77",
-#   "MD Anderson Cancer Center" = "#666666",
-#   "MSKCC"="#a6761d",
-#   "NCI Urologic Oncology Branch"="#000000",
-#   "UNC" = "#e6ab02",
-#   "Fox Chase" = "#d95f02",
-#   "University of Pittsburgh"="#7570b3"))
 mycolors <- colorRampPalette(brewer.pal(8, "Set1"))(length(unique(anno$Center)))
-# col_anno = list(Center = structure(brewer.pal(length(unique(anno$Center)), "Paired"),
 col_anno1 = list(Center = structure(mycolors))
 col_anno1 <- setNames(object = col_anno1$Center, nm = unique(anno$Center))
+col_anno <- list()
 col_anno$Center <- col_anno1
 
 ## Heatmap annotation
@@ -167,12 +141,9 @@ cols <- colorRampPalette(brewer.pal(11, "RdBu"))(256)
 tcga_kirc_hm1 <- scale(tcga_kirc_hm, center = apply(tcga_kirc_hm, 2, median, na.rm=TRUE), scale=apply(tcga_kirc_hm, 2, max, na.rm=TRUE))
 tcga_kirc_hm1[is.nan(tcga_kirc_hm1)] <- NA
 
-## Remove columns with more than 50% NA
-# scaled_hm <- scaled_hm[-which(rowMeans(is.na(scaled_hm)) > 0.50),]
-
 
 # Plot
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Clinical_center/Images/TCGA_texture_heatmap.png", width = 12, height = 5, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Clinical_center/Images/TCGA_texture_heatmap.png", width = 12, height = 5, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 g <- Heatmap(t(tcga_kirc_hm1),
              # Heatmap(t(tcga_kirc_hm),
              top_annotation = hm_anno,

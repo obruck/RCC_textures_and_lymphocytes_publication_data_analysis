@@ -1,5 +1,7 @@
 rm(list=ls())
 
+print("Start Textures/Scripts/Margin/Margin_texture_gexp.R")
+
 # Load libraries
 library(readxl)
 library(tidyverse)
@@ -17,8 +19,8 @@ library(ggrepel)
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
@@ -35,8 +37,6 @@ tcga_kirc$`non_margin_texture_other_%` <- 100*tcga_kirc$non_margin_texture_other
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  # dplyr::filter(`texture_normal_%` > 1) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 tcga_kirc0 <- tcga_kirc
 
@@ -49,14 +49,6 @@ colnames(tcga_kirc)[grep(pattern = "[[:print:]]{0,4}margin_texture_[[:print:]]*%
 margin <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other")
 nonmargin <- c("NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other")
 
-
-# # To percent
-# tcga_kirc[margin] <- sapply(tcga_kirc[margin], function(x) 100*x)
-# tcga_kirc[nonmargin] <- sapply(tcga_kirc[nonmargin], function(x) 100*x)
-
-# Factor IDs
-# tcga_kirc <- tcga_kirc %>% arrange(Cancer) %>% dplyr::mutate(tcga_id = factor(tcga_id))
-# tcga_kirc <- tcga_kirc %>% mutate(tcga_id = factor(Cancer, levels = Cancer))
 
 # Melt longer
 tcga_kirc_long <- tcga_kirc %>%
@@ -99,7 +91,7 @@ tcga_kirc_wide <- tcga_kirc_margin %>%
                             ifelse(FC < 0.1, 0.1, FC))))
 
 # Read mutation data
-tcga_kirc <- readRDS("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/petri/KIRC.fm.rds") %>%
+tcga_kirc <- readRDS("../data/clinical_transcriptome.rds") %>%
   dplyr::select(one_of(tcga_kirc_wide$ID)) %>%
   rownames_to_column() %>%
   dplyr::filter(str_detect(rowname, "GEXP"))
@@ -111,11 +103,6 @@ tcga_kirc <- tcga_kirc %>%
   dplyr::rename(tcga_id = col1)
 
 # Keep only genes with highest var/mean
-# colSums(tcga_kirc[2:5], na.rm = TRUE)
-# a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) abs(var(x, na.rm = TRUE)/mean(x, na.rm = TRUE)))
-a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) mean(x, na.rm = TRUE))
-a <- tail(a[order(a)], 10000)
-tcga_kirc <- tcga_kirc %>% dplyr::select(tcga_id, one_of(names(a)))
 a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) abs(var(x, na.rm = TRUE)))
 a <- tail(a[order(a)], 5000)
 tcga_kirc <- tcga_kirc %>% dplyr::select(tcga_id, one_of(names(a)))
@@ -130,30 +117,16 @@ tcga_kirc <- tcga_kirc_wide %>%
 
 
 # Load pathways
-# pathways <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/msigdb.v6.2.symbols.gmt")
-h <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/h.all.v6.2.symbols.gmt")
-c1 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c1.all.v6.2.symbols.gmt")
-c2 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c2.all.v6.2.symbols.gmt")
-# c3 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c3.all.v6.2.symbols.gmt")
-# c4 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c4.all.v6.2.symbols.gmt")
-c5 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c5.all.v6.2.symbols.gmt")
-c6 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c6.all.v6.2.symbols.gmt")
-# c7 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c7.all.v6.2.symbols.gmt")
+h <- GSA.read.gmt("../data/gsea_pathways/h.all.v6.2.symbols.gmt")
+c1 <- GSA.read.gmt("../data/gsea_pathways/c1.all.v6.2.symbols.gmt")
+c2 <- GSA.read.gmt("../data/gsea_pathways/c2.all.v6.2.symbols.gmt")
+c5 <- GSA.read.gmt("../data/gsea_pathways/c5.all.v6.2.symbols.gmt")
+c6 <- GSA.read.gmt("../data/gsea_pathways/c6.all.v6.2.symbols.gmt")
 
 a <- grep(x = c2$geneset.names, pattern = "^KEGG|^PID|^REACTOME|^BIOCARTA", invert = FALSE)
 c2$genesets <- c2$genesets[a]
 c2$geneset.names <- c2$geneset.names[a]
 c2$geneset.descriptions <- c2$geneset.descriptions[a]
-
-# a <- grep(x = c4$geneset.names, pattern = "MODULE", invert = TRUE)
-# c4$genesets <- c4[a]$genesets
-# c4$geneset.names <- c4[a]$geneset.names
-# c4$geneset.descriptions <- c4[a]$geneset.descriptions
-
-# a <- grep(x = c5$geneset.names, pattern = "^GO")
-# c5$genesets <- c5$genesets[a]
-# c5$geneset.names <- c5$geneset.names[a]
-# c5$geneset.descriptions <- c5$geneset.descriptions[a]
 
 
 c1$genesets <- c(c1$genesets, h$genesets, c2$genesets)
@@ -223,7 +196,7 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
   
   
   # Export data
-  writexl::write_xlsx(pvalue_df, paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/Ly_in_margin_vs_nonmargin_", texture1, "_gexp.xlsx"))
+  writexl::write_xlsx(pvalue_df, paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/Ly_in_margin_vs_nonmargin_", texture1, "_gexp.xlsx"))
   
   
   
@@ -247,38 +220,13 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
                           nperm=100000)
   # top 6 enriched pathways
   head(fgseaRes_blood[order(pval), ])
-  # fgseaRes_blood[fgseaRes_blood$pathway==head(fgseaRes_blood[order(NES), ], 1)$pathway,]$leadingEdge
   
   
-  # # FIRST
-  # png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_selectedpathways_first1.png", width = 6, height = 5, units = 'in', res = 300)
-  # plotEnrichment(pathways$genesets[[head(fgseaRes_blood[order(-NES), ], 1)$pathway]],
-  #                Ranks) + labs(title=head(fgseaRes_blood[order(-NES), ], 1)$pathway)
-  # dev.off()
-  
-  # # LAST
-  # png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_selectedpathways_last1.png", width = 6, height = 5, units = 'in', res = 300)
-  # plotEnrichment(pathways$genesets[[head(fgseaRes_blood[order(NES), ], 1)$pathway]],
-  #                Ranks) + labs(title=head(fgseaRes_blood[order(NES), ], 1)$pathway)
-  # dev.off()
-  
-  # number of significant pathways at padj < 0.01
-  # sum(fgseaRes_blood[, pval < 0.01])
-  
-  # # plot the most significantly enriched pathway
-  # png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tabs-to-blast_selected_pathways_1.png", width = 6, height = 5, units = 'in', res = 300)
-  # plotEnrichment(pathways$genesets[[head(fgseaRes_blood[order(pval), ], 1)$pathway]],
-  #                Ranks) + labs(title=head(fgseaRes_blood[order(pval), ], 1)$pathway)
-  # dev.off()
-  
-  # plot 20 most significantly enriched pathways
-  # topPathwaysUp <- fgseaRes_blood[ES > 0][pval < 0.05][head(order(-NES), n=10), pathway]
-  # topPathwaysDown <- fgseaRes_blood[ES < 0][pval < 0.05][head(order(NES), n=10), pathway]
   topPathwaysUp <- fgseaRes_blood[ES > 0][padj < 0.05][head(order(-NES), n=10), pathway]
   topPathwaysDown <- fgseaRes_blood[ES < 0][padj < 0.05][head(order(NES), n=10), pathway]
   topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
   
-  png(paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_top20_selectedpathways.png"), width = 11.5, height = 3.5, units = 'in', res = 300)
+  png(paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_top20_selectedpathways.png"), width = 11.5, height = 3.5, units = 'in', res = 300)
   plotGseaTable(pathways$genesets[topPathways], Ranks, fgseaRes_blood,
                 colwidths = c(5, 4, 0.7, 0.7, 0.7),
                 gseaParam = 0.5)
@@ -301,9 +249,6 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
     theme_bw() +
     # geom_hline(yintercept = 0, size = 2, linetype = 0) +
     scale_fill_brewer(palette="Reds", limits=c("*","**","***"), name = "Sig", labels=c("*","**","***")) +
-    # labs(x = "Immune marker",
-    #      # title = "                  Immune Markers in AML BM vs. PB",
-    #      y = "Difference in Proportion (%)") +
     theme(
       # plot.title = element_text(size=20, face="bold"),
       axis.text.x = element_text(face="bold", colour = "black"),
@@ -315,33 +260,8 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
       # legend.justification = "top",
       # legend.position = c(0.85, 0.1) )
       legend.position = "bottom" )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_pathways_barplot.png"), width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_pathways_barplot.png"), width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
   
-  
-  
-  
-  # # Export data
-  # library(data.table)
-  # fwrite(fgseaRes, file="/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/fgseaRes_Tabs.txt", sep="\t", sep2=c("", " ", ""))
-  
-  
-  #  From the plot above one can see that there are very similar pathways in the table
-  # (for example 5991502_Mitotic_Metaphase_and_Anaphase and 5991600_Mitotic_Anaphase).
-  # To select only independent pathways one can use collapsePathways function:
-  
-  # collapsedPathways <- collapsePathways(fgseaRes_blood[order(1/abs(NES))][padj < 0.05], 
-  #                                       pathways$genesets[topPathways], Ranks)
-  # 
-  # mainPathways <- fgseaRes_blood[pathway %in% collapsedPathways$mainPathways][
-  #   order(-NES), pathway]
-  # mainPathways
-  
-  # png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_top20_selected_pathways_collapsed.png", width = 11, height = 3.5, units = 'in', res = 300)
-  # plotGseaTable(pathways$genesets[mainPathways], Ranks, fgseaRes_blood, 
-  #               # colwidths = c(5, 3.2, 0.5, 0.5, 0.5),
-  #               colwidths = c(5, 4, 0.7, 0.7, 0.7),
-  #               gseaParam = 0.5)
-  # dev.off()
   
   
   
@@ -371,13 +291,11 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
   
   
   # Colors
-  # if ( unique(pvalue_df1$label %in% 2) & max(pvalue_df1$label) == 2 ) {
   if ( max(as.numeric(as.character(pvalue_df1$label))) == 2 & length(unique(as.numeric(as.character(pvalue_df1$label)))) == 2) {
     values = c("grey", "red", "blue")
   } else {
     values = c("grey", "blue", "red")
   }
-  # values = c("white", "blue", "red")
   
   # Plot
   # png(paste0("/Users/oscarbruck/OneDrive - University of Helsinki/Tutkimus/Projekteja/MDS/Analysis/HE/Results/Volcanoplot_mIHC_singlemarker_", dico, ".png"),
@@ -466,10 +384,10 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
                      segment.size = 1,
                      aes(label=genes), size = 5, fontface = "bold")
   
-  ggsave(plot = g1, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p0005.png"), width = 7, height = 7, units = 'in', dpi = 300)
-  ggsave(plot = g2, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p0001.png"), width = 7, height = 7, units = 'in', dpi = 300)
-  ggsave(plot = g3, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p00005.png"), width = 7, height = 7, units = 'in', dpi = 300)
-  ggsave(plot = g4, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p00001.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g1, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p0005.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g2, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p0001.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g3, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p00005.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g4, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p00001.png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 

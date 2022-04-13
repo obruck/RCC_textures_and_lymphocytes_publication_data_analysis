@@ -1,3 +1,7 @@
+rm(list=ls())
+
+print("Start Textures/Scripts/Texture/Blood_stroma_association_clinical.R")
+
 # Load libraries
 library(readxl)
 library(tidyverse)
@@ -10,15 +14,18 @@ library(fastDummies)
 library(survival)
 library(survminer)
 
-dir.create("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Texture_balloonplot")
-dir.create("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Texture_survival")
+
+findcolnumber <- function(df, thecolumnname){
+  which(colnames(df) == deparse(substitute(thecolumnname)))
+}
 
 
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
+
 
 # Normalize by removing empty
 tcga_kirc$`texture_blood_%` <- 100*tcga_kirc$texture_blood / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
@@ -29,14 +36,12 @@ tcga_kirc$`texture_other_%` <- 100*tcga_kirc$texture_other / (tcga_kirc$texture_
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
 # Petri's data
-df <- readRDS("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/petri/KIRC.fm.rds")
+df <- readRDS("../data/clinical_transcriptome.rds") %>%
 # Filter patients
-df <- df %>%
   dplyr::select(one_of(tcga_kirc$tcga_id))
 
 # Clean clinical data
@@ -324,7 +329,7 @@ for (i in 1:3) {
   
   
   # Export data
-  writexl::write_xlsx(pvalue_df, paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/", j_name, "/Clinical/Table_wilcoxon_clinical.xlsx"))
+  writexl::write_xlsx(pvalue_df, paste0("Textures/Images/", j_name, "/Clinical/Table_wilcoxon_clinical.xlsx"))
   
 }
 
@@ -346,7 +351,7 @@ tcga_kirc0 <- tcga_kirc
 # Read statistics
 if (exists("pvalue_df0")) {rm(pvalue_df0)}
 for (texture1 in c("Blood", "Stroma", "Stroma_WithNormal")) {
-  pvalue_df <- read_xlsx(paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/", texture1, "/Clinical/Table_wilcoxon_clinical.xlsx"))
+  pvalue_df <- read_xlsx(paste0("Textures/Images/", texture1, "/Clinical/Table_wilcoxon_clinical.xlsx"))
   pvalue_df$Texture = ifelse(texture1 == "Stroma", "Stroma\nWo Normal",
                              ifelse(texture1 == "Stroma_WithNormal", "Stroma\nWith Normal",
                                     ifelse(texture1 == "Blood", "Blood", NA)))
@@ -456,7 +461,7 @@ for (unique_value_name in 1:length(list(unique_values_0, unique_values_1))) {
           legend.title = element_text(size=12, colour="black", face="bold"))
   p
   
-  ggsave(plot = p, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Texture_balloonplot/Balloonplot_", unique_value_name, ".png"), width = 5, height = nrow(pvalue_df1)/15, units = 'in', dpi = 300)
+  ggsave(plot = p, filename = paste0("Textures/Images/Texture_balloonplot/Balloonplot_", unique_value_name, ".png"), width = 5, height = nrow(pvalue_df1)/15, units = 'in', dpi = 300)
   
 }
 
@@ -515,7 +520,7 @@ for (two1 in twos) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = 1.0*a
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Clinical/Blood_", two1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Blood/Clinical/Blood_", two1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -561,7 +566,7 @@ for (three1 in threes) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.0*a, 1.12*a, 1.06*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Clinical/Blood_", three1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Blood/Clinical/Blood_", three1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -607,7 +612,7 @@ for (four1 in fours) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Clinical/Blood_", four1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Blood/Clinical/Blood_", four1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -671,7 +676,7 @@ for (two1 in twos) {
         # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
         y.position = 1.0*a
       )
-    ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Clinical/Stroma_", two1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+    ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Clinical/Stroma_", two1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
     
   }
 }
@@ -720,7 +725,7 @@ for (three1 in threes) {
         # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
         y.position = c(1.0*a, 1.12*a, 1.06*a)
       )
-    ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Clinical/Stroma_", three1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+    ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Clinical/Stroma_", three1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
     
   }
 }
@@ -769,7 +774,7 @@ for (four1 in fours) {
         # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
         y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
       )
-    ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Clinical/Stroma_", four1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+    ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Clinical/Stroma_", four1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
     
   }
   
@@ -831,7 +836,7 @@ for (two1 in twos) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = 1.0*a
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Clinical/Stroma_", two1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Clinical/Stroma_", two1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -877,7 +882,7 @@ for (three1 in threes) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.0*a, 1.12*a, 1.06*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Clinical/Stroma_", three1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Clinical/Stroma_", three1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -923,7 +928,7 @@ for (four1 in fours) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Clinical/Stroma_", four1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Clinical/Stroma_", four1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -936,7 +941,7 @@ df1 <- df[grep(pattern = "N:SAMP:", x = rownames(df)),]
 df1 <- df1 %>% rownames_to_column()
 df1 <- df1[apply(df1[,-1], 1, function(x) !all(x==0)),]
 df1 <- df1[apply(df1[,-1], 1, function(x) !all(x==1)),]
-df1 <- df1 %>% filter_all(any_vars(!is.na(.)))
+df1 <- df1 %>% dplyr::filter(!is.na(rowname))
 df2 <- df1 %>% 
   pivot_longer(!rowname, names_to = "col1", values_to = "col2") %>% 
   pivot_wider(names_from = "rowname", values_from = "col2") %>%
@@ -1020,7 +1025,7 @@ for (normal1 in c("all", "with_normal", "wo_normal")) {
                     font.legend = c(13, "bold", "black"),    #font voi olla esim. "bold" tai "plain"
                     legend.labs = c("Low", "Intermediate", "High"),
                     size = 1)  # change line size
-    ggsave(plot = print(g), filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Texture_survival/KM_Texture_FC_", texture1, "_", normal1, "_.png"), width = 6, height = 6, units = 'in', dpi = 300)
+    ggsave(plot = print(g), filename = paste0("Textures/Images/Texture_survival/KM_Texture_FC_", texture1, "_", normal1, "_.png"), width = 6, height = 6, units = 'in', dpi = 300)
     
   }
 }

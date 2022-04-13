@@ -20,8 +20,8 @@ source("./Preprocessing/Preprocess_rcc_pts.R")
 
 
 # Run all the rest
-rscripts = list.files(path = ".", pattern = ".R", recursive = TRUE, full.names = TRUE)
-rscripts = rscripts[-grep(x = rscripts, pattern = "Preprocess")]
+rscripts = list.files(path = ".", pattern = ".R$", recursive = TRUE, full.names = TRUE)
+rscripts = rscripts[grep(x = rscripts, pattern = "Preprocess", invert = TRUE)]
 for (rscript in rscripts) {
   source(rscript)
 }

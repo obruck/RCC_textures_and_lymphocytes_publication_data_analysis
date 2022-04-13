@@ -1,3 +1,7 @@
+rm(list=ls())
+
+print("Start Ly/Scripts/Ly_barplot.R")
+
 # Load libraries
 library(jsonlite)
 library(readxl)
@@ -13,17 +17,15 @@ library(RColorBrewer)
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
-
 
 
 ############################# PLOT ##########################################################################################################
@@ -62,7 +64,7 @@ tcga_kirc_long <- tcga_kirc_long %>%
 
 
 # Plot
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/TCGA_ly_barplot_relative.png", width = 18, height = 5, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Ly/Images/TCGA_ly_barplot_relative.png", width = 18, height = 5, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 ggplot(tcga_kirc_long, aes(x = reorder(ID, -orderid), y = value, fill = Lymphocytes)) +
   geom_bar(stat = "identity") +
   labs(y="Ly Density (%)") +
@@ -93,7 +95,7 @@ tcga_kirc$Ly <- (tcga_kirc$Ly_Blood * tcga_kirc$texture_blood + tcga_kirc$Ly_Can
   (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 
 # TCGA clinical sources
-clinical_sources <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/TCGA_source_sites.xlsx") %>%
+clinical_sources <- read_xlsx("../data/TCGA_source_sites.xlsx") %>%
   dplyr::select(-StudyName, -BCR)
 
 # Join Otso's data and TCGA centers
@@ -102,7 +104,7 @@ tcga_kirc <- tcga_kirc %>%
 
 
 # Plot
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Clinical_center/Images/TCGA_texture_normalized_ly_center.png", width = 8, height = 8, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Clinical_center/Images/TCGA_texture_normalized_ly_center.png", width = 8, height = 8, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 ggplot(data=tcga_kirc, aes(x=ClinicalCenter, y=Ly)) +
   # geom_rect(xmin=0, xmax=17, ymin=3.82, ymax=17.78, alpha=0.5,fill="grey90") +
   geom_jitter(size=3, width = 0.2, aes(fill=ClinicalCenter), shape = 21, color = "black") +
@@ -162,7 +164,7 @@ for (variable1 in unique(tcga_kirc_long$ClinicalCenter)) {
 
 
 # Export
-writexl::write_xlsx(df, "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Clinical_center/Images/TCGA_texture_normalized_ly_center.xlsx")
+writexl::write_xlsx(df, "Clinical_center/Images/TCGA_texture_normalized_ly_center.xlsx")
 
 # Normalize Ly
 tcga_kirc_long1 <- tcga_kirc_long %>%
@@ -170,7 +172,7 @@ tcga_kirc_long1 <- tcga_kirc_long %>%
 tcga_kirc_long1$Ly_norm <- tcga_kirc_long1$Ly / tcga_kirc_long1$medianT
 
 # Plot
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Clinical_center/Images/TCGA_texture_normalized_ly_center_after_normalization.png", width = 8, height = 8, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Clinical_center/Images/TCGA_texture_normalized_ly_center_after_normalization.png", width = 8, height = 8, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 ggplot(tcga_kirc_long1, aes_string(x="ClinicalCenter", y="Ly_norm")) +
   geom_jitter(size=3, width = 0.2, aes(fill=ClinicalCenter), shape = 21, color = "black") +
   geom_boxplot(outlier.shape = NA, alpha = 0.5) +
@@ -189,41 +191,18 @@ ggplot(tcga_kirc_long1, aes_string(x="ClinicalCenter", y="Ly_norm")) +
                      size = 5)
 dev.off()
 
-colnames(df2)[1] <- "tcga_id"
-
-
-# tcga_kirc_long2 <- tcga_kirc_long1 %>% inner_join(df2)
-# tcga_kirc_long2 <- tcga_kirc_long2 %>% dplyr::left_join(tcga_kirc %>% dplyr::select(tcga_id, starts_with("texture")))
-# tcga_kirc_long2 <- tcga_kirc_long2 %>% dplyr::left_join(tcga_kirc %>% dplyr::select(tcga_id, starts_with("bin_lymphocytes_")))
-# tcga_kirc_long2$Ly_c <- tcga_kirc_long2$Ly*(tcga_kirc_long2$texture_cancer)
-# tcga_kirc_long2$Ly_norm_c <- tcga_kirc_long2$Ly_norm*(tcga_kirc_long2$texture_cancer)
-# tcga_kirc_long2$Ly_norm_c <- tcga_kirc_long2$Ly*(tcga_kirc_long2$texture_cancer + tcga_kirc_long2$texture_normal + tcga_kirc_long2$texture_other + tcga_kirc_long2$texture_blood + tcga_kirc_long2$texture_stroma)
-# tcga_kirc_long2$bin_ly <- (tcga_kirc_long2$bin_lymphocytes_blood + tcga_kirc_long2$bin_lymphocytes_cancer + tcga_kirc_long2$bin_lymphocytes_normal + tcga_kirc_long2$bin_lymphocytes_stroma + tcga_kirc_long2$bin_lymphocytes_other) / (tcga_kirc_long2$texture_cancer + tcga_kirc_long2$texture_normal + tcga_kirc_long2$texture_other + tcga_kirc_long2$texture_blood + tcga_kirc_long2$texture_stroma)
-# tcga_kirc_long2$bin_ly <- tcga_kirc_long2$bin_lymphocytes_cancer/ tcga_kirc_long2$texture_cancer
-# tcga_kirc_long2[,grep(x = colnames(tcga_kirc_long2), pattern = "GEXP")] <- sapply(tcga_kirc_long2[,grep(x = colnames(tcga_kirc_long2), pattern = "GEXP")], as.numeric)
-# cyt <- tcga_kirc_long2 %>% dplyr::select(`N:GEXP:GZMB`,`N:GEXP:PRF1`)
-# cyt$cyt_score <- exp(log(rowMeans(cyt)))
-# tcga_kirc_long2 <- tcga_kirc_long2 %>% left_join(cyt)
-# tcga_kirc_long3 <- tcga_kirc_long2 %>% dplyr::filter(!ClinicalCenter %in% c("Fox Chase", "MD Anderson Cancer Center"))
-# plot(log(tcga_kirc_long3$bin_ly), log(tcga_kirc_long3$`N:GEXP:GZMB`))
-# cor.test(log(tcga_kirc_long3$bin_ly), log(tcga_kirc_long3$`N:GEXP:GZMB`), method = "spearman")
-# plot(log(tcga_kirc_long3$bin_ly), log(tcga_kirc_long3$cyt_score))
-# cor.test(log(tcga_kirc_long3$bin_ly), log(tcga_kirc_long3$cyt_score), method = "spearman")
-
-
 
 ############################# LOAD DATA ##########################################################################################################
 
 
 # Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
@@ -258,7 +237,7 @@ tcga_kirc_long <- tcga_kirc_long %>%
 
 
 # Plot
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/TCGA_ly_barplot_quantity.png", width = 18, height = 5, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Ly/Images/TCGA_ly_barplot_quantity.png", width = 18, height = 5, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 ggplot(tcga_kirc_long, aes(x = reorder(ID, -orderid), y = value, fill = Lymphocytes)) +
   geom_bar(stat = "identity") +
   labs(y="Ly Density (%)") +

@@ -1,5 +1,7 @@
 rm(list = ls())
 
+print("Start Textures/Scripts/Texture/Blood_stroma_association_mutation.R")
+
 # Load libraries
 library(readxl)
 library(tidyverse)
@@ -13,8 +15,8 @@ library(GSA)
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/data_with_ak.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/mutations_final.xlsx")
 
 
 # Normalize by removing empty
@@ -26,7 +28,6 @@ tcga_kirc$`texture_other_%` <- 100*tcga_kirc$texture_other / (tcga_kirc$texture_
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   janitor::clean_names() %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
@@ -105,7 +106,7 @@ rownames(pvalue_df) = NULL
 
 
 # Export data
-writexl::write_xlsx(pvalue_df, "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Mut/Blood_mut.xlsx")
+writexl::write_xlsx(pvalue_df, "Textures/Images/Blood/Mut/Blood_mut.xlsx")
 tcga_kirc0 <- tcga_kirc
 
 
@@ -158,7 +159,7 @@ for (two1 in pvalue_df$genes) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = 1.0*a
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Mut/Blood_", two1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Blood/Mut/Blood_", two1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
   
 }
 
@@ -204,7 +205,7 @@ for (two1 in c("m_rna_cluster", "methylation_cluster")) {
       size = 5,
       y.position = c(1.0*a, 1.12*a, 1.06*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Mut/Blood_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Blood/Mut/Blood_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -252,7 +253,7 @@ for (two1 in c("mi_rna_cluster")) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Mut/Blood_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Blood/Mut/Blood_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -267,8 +268,8 @@ for (two1 in c("mi_rna_cluster")) {
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/data_with_ak.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/mutations_final.xlsx")
 
 
 # Normalize by removing empty
@@ -280,7 +281,6 @@ tcga_kirc$`texture_other_%` <- 100*tcga_kirc$texture_other / (tcga_kirc$texture_
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   janitor::clean_names() %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
@@ -360,7 +360,7 @@ rownames(pvalue_df) = NULL
 
 
 # Export data
-writexl::write_xlsx(pvalue_df, "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Mut/Stroma_mut.xlsx")
+writexl::write_xlsx(pvalue_df, "Textures/Images/Stroma/Mut/Stroma_mut.xlsx")
 tcga_kirc0 <- tcga_kirc
 
 
@@ -413,7 +413,7 @@ for (two1 in pvalue_df$genes) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = 1.0*a
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Mut/Stroma_", two1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Mut/Stroma_", two1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
   
 }
 
@@ -459,7 +459,7 @@ for (two1 in c("m_rna_cluster", "methylation_cluster")) {
       size = 5,
       y.position = c(1.0*a, 1.12*a, 1.06*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Mut/Stroma_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Mut/Stroma_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -507,7 +507,7 @@ for (two1 in c("mi_rna_cluster")) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Mut/Stroma_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Mut/Stroma_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -525,8 +525,8 @@ for (two1 in c("mi_rna_cluster")) {
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/data_with_ak.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/mutations_final.xlsx")
 
 
 # Normalize by removing empty
@@ -538,7 +538,6 @@ tcga_kirc$`texture_other_%` <- 100*tcga_kirc$texture_other / (tcga_kirc$texture_
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   janitor::clean_names() %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
@@ -583,9 +582,6 @@ tcga_kirc <- tcga_kirc %>%
   dplyr::mutate(ploidy = ifelse(ploidy == "Unavailable", NA, as.numeric(as.character(ploidy))),
                 ploidy = ifelse(ploidy > median(ploidy, na.rm=TRUE), "High", "Low"))
 
-# a <- data.frame(tcga_kirc[c(str_detect(colnames(tcga_kirc), "_mutation") | colnames(tcga_kirc)=="mutations_total" | colnames(tcga_kirc)=="ploidy")])
-# b <- sapply(a, table)
-
 # Multiple comparison (two-sided, unpaired, Mann-Whitney U test)
 # gexp_data <- tcga_kirc[(findcolnumber(tcga_kirc, tissue_source_site)+1):ncol(tcga_kirc)]
 multiple_t_tests_p_value <- lapply(tcga_kirc[c((str_detect(colnames(tcga_kirc), "_mutation") & !colnames(tcga_kirc)=="met_mutation") | colnames(tcga_kirc)=="mutations_total" | colnames(tcga_kirc)=="ploidy")],
@@ -618,7 +614,7 @@ rownames(pvalue_df) = NULL
 
 
 # Export data
-writexl::write_xlsx(pvalue_df, "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Mut/Stroma_mut.xlsx")
+writexl::write_xlsx(pvalue_df, "Textures/Images/Stroma_WithNormal/Mut/Stroma_mut.xlsx")
 tcga_kirc0 <- tcga_kirc
 
 
@@ -671,7 +667,7 @@ for (two1 in pvalue_df$genes) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = 1.0*a
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Mut/Stroma_", two1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Mut/Stroma_", two1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
   
 }
 
@@ -717,7 +713,7 @@ for (two1 in c("m_rna_cluster", "methylation_cluster")) {
       size = 5,
       y.position = c(1.0*a, 1.12*a, 1.06*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Mut/Stroma_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Mut/Stroma_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
   
 }
 
@@ -765,6 +761,6 @@ for (two1 in c("mi_rna_cluster")) {
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
     )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Mut/Stroma_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Mut/Stroma_", two1, "_cluster.png"), width = 5, height = 7, units = 'in', dpi = 300)
   
 }

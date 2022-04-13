@@ -1,5 +1,7 @@
 rm(list=ls())
 
+print("Start Ly/Scripts/Ly_gexp.R")
+
 # Load libraries
 library(readxl)
 library(tidyverse)
@@ -13,14 +15,13 @@ library(GSA)
 library(fgsea)
 library(ggrepel)
 
-dir.create("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Gexp")
-
 
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
+
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
@@ -42,7 +43,6 @@ tcga_kirc$inf_bin_lymphocytes_total <- (tcga_kirc$bin_lymphocytes_blood + tcga_k
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
   dplyr::filter(`texture_normal_%` < 1) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
@@ -62,7 +62,7 @@ textures <- c("Blood", "Cancer", "Stroma", "Other", "Total")
 tcga_kirc0 <- tcga_kirc
 
 # Read gexp data
-tcga_kirc <- readRDS("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/petri/KIRC.fm.rds") %>%
+tcga_kirc <- readRDS("../data/clinical_transcriptome.rds") %>%
   dplyr::select(one_of(tcga_kirc$tcga_id)) %>%
   rownames_to_column() %>%
   dplyr::filter(str_detect(rowname, "GEXP"))
@@ -74,11 +74,7 @@ tcga_kirc <- tcga_kirc %>%
   dplyr::rename(tcga_id = col1)
 
 # Keep only genes with highest var/mean
-# colSums(tcga_kirc[2:5], na.rm = TRUE)
-# a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) abs(var(x, na.rm = TRUE)/mean(x, na.rm = TRUE)))
-a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) mean(x, na.rm = TRUE))
-a <- tail(a[order(a)], 10000)
-tcga_kirc <- tcga_kirc %>% dplyr::select(tcga_id, one_of(names(a)))
+
 a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) abs(var(x, na.rm = TRUE)))
 a <- tail(a[order(a)], 5000)
 tcga_kirc <- tcga_kirc %>% dplyr::select(tcga_id, one_of(names(a)))
@@ -92,30 +88,16 @@ tcga_kirc <- tcga_kirc0 %>%
 
 
 # Load pathways
-# pathways <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/msigdb.v6.2.symbols.gmt")
-h <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/h.all.v6.2.symbols.gmt")
-c1 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c1.all.v6.2.symbols.gmt")
-c2 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c2.all.v6.2.symbols.gmt")
-# c3 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c3.all.v6.2.symbols.gmt")
-# c4 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c4.all.v6.2.symbols.gmt")
-c5 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c5.all.v6.2.symbols.gmt")
-c6 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c6.all.v6.2.symbols.gmt")
-# c7 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c7.all.v6.2.symbols.gmt")
+h <- GSA.read.gmt("../data/gsea_pathways/h.all.v6.2.symbols.gmt")
+c1 <- GSA.read.gmt("../data/gsea_pathways/c1.all.v6.2.symbols.gmt")
+c2 <- GSA.read.gmt("../data/gsea_pathways/c2.all.v6.2.symbols.gmt")
+c5 <- GSA.read.gmt("../data/gsea_pathways/c5.all.v6.2.symbols.gmt")
+c6 <- GSA.read.gmt("../data/gsea_pathways/c6.all.v6.2.symbols.gmt")
 
 a <- grep(x = c2$geneset.names, pattern = "^KEGG|^PID|^REACTOME|^BIOCARTA", invert = FALSE)
 c2$genesets <- c2$genesets[a]
 c2$geneset.names <- c2$geneset.names[a]
 c2$geneset.descriptions <- c2$geneset.descriptions[a]
-
-# a <- grep(x = c4$geneset.names, pattern = "MODULE", invert = TRUE)
-# c4$genesets <- c4[a]$genesets
-# c4$geneset.names <- c4[a]$geneset.names
-# c4$geneset.descriptions <- c4[a]$geneset.descriptions
-
-# a <- grep(x = c5$geneset.names, pattern = "^GO")
-# c5$genesets <- c5$genesets[a]
-# c5$geneset.names <- c5$geneset.names[a]
-# c5$geneset.descriptions <- c5$geneset.descriptions[a]
 
 
 c1$genesets <- c(c1$genesets, h$genesets, c2$genesets)
@@ -174,7 +156,7 @@ for (texture1 in textures) {
   
   
   # Export data
-  writexl::write_xlsx(pvalue_df, paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Gexp/Ly_", texture1, "_gexp.xlsx"))
+  writexl::write_xlsx(pvalue_df, paste0("Ly/Images/Gexp/Ly_", texture1, "_gexp.xlsx"))
   
   
   
@@ -187,7 +169,6 @@ for (texture1 in textures) {
   
   # GSEA
   Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = log(median1/median2)) %>% dplyr::filter(!is.na(FC) & pvalue<0.05)
-  # Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = 1/pvalue) %>% dplyr::filter(!is.na(FC))
   Ranks <- Ranks_tmp %>% dplyr::select(FC)
   Ranks <- setNames(object = Ranks$FC, nm = Ranks_tmp$genes)
   names(pathways$genesets) <- pathways$geneset.names
@@ -204,7 +185,7 @@ for (texture1 in textures) {
   topPathwaysDown <- fgseaRes_blood[ES < 0][padj < 0.05][head(order(NES), n=10), pathway]
   topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
   
-  png(paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Gexp/", texture1, "_gexp_top20_selectedpathways.png"), width = 18.5, height = 3.5, units = 'in', res = 300)
+  png(paste0("Ly/Images/Gexp/", texture1, "_gexp_top20_selectedpathways.png"), width = 18.5, height = 3.5, units = 'in', res = 300)
   plotGseaTable(pathways$genesets[topPathways], Ranks, fgseaRes_blood,
                 colwidths = c(5, 4, 0.7, 0.7, 0.7),
                 gseaParam = 0.5)
@@ -219,15 +200,10 @@ for (texture1 in textures) {
                   Sig = factor(Sig, levels = c("p<0.1", "*", "**", "***")))
   g <- ggplot(data = fgseaRes_res2, aes(x = reorder(pathway, NES), y = NES, fill = Sig)) +
     geom_bar(stat = "identity", width = 0.8, color="black") +
-    # geom_text(data = flow_median[flow_median$Disease=="AML",], aes(label = round(BM,1), x = name, angle = 0, y = -75), fontface="bold", size=4) + # angle=0,
     coord_flip() +
     xlab("") +
     theme_bw() +
-    # geom_hline(yintercept = 0, size = 2, linetype = 0) +
     scale_fill_brewer(palette="Reds", limits=c("*","**","***"), name = "Sig", labels=c("*","**","***")) +
-    # labs(x = "Immune marker",
-    #      # title = "                  Immune Markers in AML BM vs. PB",
-    #      y = "Difference in Proportion (%)") +
     theme(
       # plot.title = element_text(size=20, face="bold"),
       axis.text.x = element_text(face="bold", colour = "black"),
@@ -239,7 +215,7 @@ for (texture1 in textures) {
       # legend.justification = "top",
       # legend.position = c(0.85, 0.1) )
       legend.position = "bottom" )
-  ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Gexp/", texture1, "_pathways_barplot.png"), width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Ly/Images/Gexp/", texture1, "_pathways_barplot.png"), width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
   
   
   # Prepare data for volcanoplot
@@ -275,8 +251,6 @@ for (texture1 in textures) {
   # values = c("white", "blue", "red")
   
   # Plot
-  # png(paste0("/Users/oscarbruck/OneDrive - University of Helsinki/Tutkimus/Projekteja/MDS/Analysis/HE/Results/Volcanoplot_mIHC_singlemarker_", dico, ".png"),
-  # width = 9, height = 9, units = 'in', res = 300)
   g1 <- ggplot(pvalue_df1, aes(log(fold_change1), -log10(pvalue))) +
     geom_point(aes(fill=sig2), pch = 21, color = "black", size = 4) +
     labs(x="Fold change (Log)", y="Log10 p-value") +
@@ -361,10 +335,10 @@ for (texture1 in textures) {
                      segment.size = 1,
                      aes(label=genes), size = 5, fontface = "bold")
   
-  ggsave(plot = g1, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Gexp/", texture1, "_gexp_volcano_p0005.png"), width = 7, height = 7, units = 'in', dpi = 300)
-  ggsave(plot = g2, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Gexp/", texture1, "_gexp_volcano_p0001.png"), width = 7, height = 7, units = 'in', dpi = 300)
-  ggsave(plot = g3, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Gexp/", texture1, "_gexp_volcano_p00005.png"), width = 7, height = 7, units = 'in', dpi = 300)
-  ggsave(plot = g4, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Ly/Images/Gexp/", texture1, "_gexp_volcano_p00001.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g1, filename = paste0("Ly/Images/Gexp/", texture1, "_gexp_volcano_p0005.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g2, filename = paste0("Ly/Images/Gexp/", texture1, "_gexp_volcano_p0001.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g3, filename = paste0("Ly/Images/Gexp/", texture1, "_gexp_volcano_p00005.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g4, filename = paste0("Ly/Images/Gexp/", texture1, "_gexp_volcano_p00001.png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 

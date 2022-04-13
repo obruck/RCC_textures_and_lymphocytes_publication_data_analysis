@@ -1,5 +1,8 @@
 rm(list = ls())
 
+print("Start Textures/Scripts/Texture/Blood_stroma_association_gexp.R")
+
+
 # Load libraries
 library(readxl)
 library(tidyverse)
@@ -13,8 +16,8 @@ library(GSA)
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 
 
 # Normalize by removing empty
@@ -26,14 +29,12 @@ tcga_kirc$`texture_other_%` <- 100*tcga_kirc$texture_other / (tcga_kirc$texture_
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 
 # Petri's data
-df <- readRDS("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/petri/KIRC.fm.rds")
+df <- readRDS("../data/clinical_transcriptome.rds") %>%
 # Filter patients
-df <- df %>%
   dplyr::select(one_of(tcga_kirc$tcga_id))
 
 # Clean clinical data
@@ -70,30 +71,16 @@ tcga_kirc0 <- tcga_kirc
 
 
 # Load pathways
-# pathways <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/msigdb.v6.2.symbols.gmt")
-h <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/h.all.v6.2.symbols.gmt")
-c1 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c1.all.v6.2.symbols.gmt")
-c2 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c2.all.v6.2.symbols.gmt")
-# c3 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c3.all.v6.2.symbols.gmt")
-# c4 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c4.all.v6.2.symbols.gmt")
-c5 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c5.all.v6.2.symbols.gmt")
-c6 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c6.all.v6.2.symbols.gmt")
-# c7 <- GSA.read.gmt("/Users/oscarbruck/OneDrive - University of Helsinki/AML/AML_Tcells/RNAseq/gsea/pathways/c7.all.v6.2.symbols.gmt")
+h <- GSA.read.gmt("../data/gsea_pathways/h.all.v6.2.symbols.gmt")
+c1 <- GSA.read.gmt("../data/gsea_pathways/c1.all.v6.2.symbols.gmt")
+c2 <- GSA.read.gmt("../data/gsea_pathways/c2.all.v6.2.symbols.gmt")
+c5 <- GSA.read.gmt("../data/gsea_pathways/c5.all.v6.2.symbols.gmt")
+c6 <- GSA.read.gmt("../data/gsea_pathways/c6.all.v6.2.symbols.gmt")
 
 a <- grep(x = c2$geneset.names, pattern = "^KEGG|^PID|^REACTOME|^BIOCARTA", invert = FALSE)
 c2$genesets <- c2$genesets[a]
 c2$geneset.names <- c2$geneset.names[a]
 c2$geneset.descriptions <- c2$geneset.descriptions[a]
-
-# a <- grep(x = c4$geneset.names, pattern = "MODULE", invert = TRUE)
-# c4$genesets <- c4[a]$genesets
-# c4$geneset.names <- c4[a]$geneset.names
-# c4$geneset.descriptions <- c4[a]$geneset.descriptions
-
-# a <- grep(x = c5$geneset.names, pattern = "^GO")
-# c5$genesets <- c5$genesets[a]
-# c5$geneset.names <- c5$geneset.names[a]
-# c5$geneset.descriptions <- c5$geneset.descriptions[a]
 
 
 c1$genesets <- c(c1$genesets, h$genesets, c2$genesets)
@@ -162,38 +149,12 @@ fgseaRes_blood <- fgsea(pathways = pathways$genesets,
                                 nperm=100000)
 # top 6 enriched pathways
 head(fgseaRes_blood[order(pval), ])
-# fgseaRes_blood[fgseaRes_blood$pathway==head(fgseaRes_blood[order(NES), ], 1)$pathway,]$leadingEdge
 
-
-# # FIRST
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_selectedpathways_first1.png", width = 6, height = 5, units = 'in', res = 300)
-# plotEnrichment(pathways$genesets[[head(fgseaRes_blood[order(-NES), ], 1)$pathway]],
-#                Ranks) + labs(title=head(fgseaRes_blood[order(-NES), ], 1)$pathway)
-# dev.off()
-
-# # LAST
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_selectedpathways_last1.png", width = 6, height = 5, units = 'in', res = 300)
-# plotEnrichment(pathways$genesets[[head(fgseaRes_blood[order(NES), ], 1)$pathway]],
-#                Ranks) + labs(title=head(fgseaRes_blood[order(NES), ], 1)$pathway)
-# dev.off()
-
-# number of significant pathways at padj < 0.01
-# sum(fgseaRes_blood[, pval < 0.01])
-
-# # plot the most significantly enriched pathway
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tabs-to-blast_selected_pathways_1.png", width = 6, height = 5, units = 'in', res = 300)
-# plotEnrichment(pathways$genesets[[head(fgseaRes_blood[order(pval), ], 1)$pathway]],
-#                Ranks) + labs(title=head(fgseaRes_blood[order(pval), ], 1)$pathway)
-# dev.off()
-
-# plot 20 most significantly enriched pathways
-# topPathwaysUp <- fgseaRes_blood[ES > 0][pval < 0.05][head(order(-NES), n=10), pathway]
-# topPathwaysDown <- fgseaRes_blood[ES < 0][pval < 0.05][head(order(NES), n=10), pathway]
 topPathwaysUp <- fgseaRes_blood[ES > 0][padj < 0.05][head(order(-NES), n=10), pathway]
 topPathwaysDown <- fgseaRes_blood[ES < 0][padj < 0.05][head(order(NES), n=10), pathway]
 topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
 
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Gexp/Blood_gexp_top20_selectedpathways.png", width = 10, height = 1.25, units = 'in', res = 300)
+png("Textures/Images/Blood/Gexp/Blood_gexp_top20_selectedpathways.png", width = 10, height = 1.25, units = 'in', res = 300)
 plotGseaTable(pathways$genesets[topPathways], Ranks, fgseaRes_blood,
               colwidths = c(5, 4, 0.7, 0.7, 0.7),
               gseaParam = 0.5)
@@ -229,32 +190,7 @@ g <- ggplot(data = fgseaRes_res2, aes(x = reorder(pathway, NES), y = NES, fill =
     # legend.justification = "top",
     # legend.position = c(0.85, 0.1) )
     legend.position = "bottom" )
-ggsave(plot = g, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Gexp/Blood_gexp_top20_selectedpathways_barplot.png", width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
-
-
-# # Export data
-# library(data.table)
-# fwrite(fgseaRes, file="/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/fgseaRes_Tabs.txt", sep="\t", sep2=c("", " ", ""))
-
-
-#  From the plot above one can see that there are very similar pathways in the table
-# (for example 5991502_Mitotic_Metaphase_and_Anaphase and 5991600_Mitotic_Anaphase).
-# To select only independent pathways one can use collapsePathways function:
-
-# collapsedPathways <- collapsePathways(fgseaRes_blood[order(1/abs(NES))][padj < 0.05], 
-#                                       pathways$genesets[topPathways], Ranks)
-# 
-# mainPathways <- fgseaRes_blood[pathway %in% collapsedPathways$mainPathways][
-#   order(-NES), pathway]
-# mainPathways
-
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_top20_selected_pathways_collapsed.png", width = 11, height = 3.5, units = 'in', res = 300)
-# plotGseaTable(pathways$genesets[mainPathways], Ranks, fgseaRes_blood, 
-#               # colwidths = c(5, 3.2, 0.5, 0.5, 0.5),
-#               colwidths = c(5, 4, 0.7, 0.7, 0.7),
-#               gseaParam = 0.5)
-# dev.off()
-
+ggsave(plot = g, filename = "Textures/Images/Blood/Gexp/Blood_gexp_top20_selectedpathways_barplot.png", width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
 
 
 
@@ -335,8 +271,8 @@ g2 <- ggplot(pvalue_df1, aes(log(fold_change1), -log10(pvalue))) +
                    # label.padding = 0.5,
                    segment.size = 1,
                    aes(label=genes), size = 5, fontface = "bold")
-ggsave(plot = g1, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Blood_gexp_volcano_p0005.png", width = 7, height = 7, units = 'in', dpi = 300)
-ggsave(plot = g2, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Blood/Blood_gexp_volcano_p0001.png", width = 7, height = 7, units = 'in', dpi = 300)
+ggsave(plot = g1, filename = "Textures/Images/Blood/Blood_gexp_volcano_p0005.png", width = 7, height = 7, units = 'in', dpi = 300)
+ggsave(plot = g2, filename = "Textures/Images/Blood/Blood_gexp_volcano_p0001.png", width = 7, height = 7, units = 'in', dpi = 300)
 
 
 
@@ -392,7 +328,7 @@ pvalue_df <- pvalue_df %>%
   )
 
 # Export
-writexl::write_xlsx(pvalue_df, "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Gexp/gexp_genes.xlsx")
+writexl::write_xlsx(pvalue_df, "Textures/Images/Stroma/Gexp/gexp_genes.xlsx")
 
 
 # GSEA
@@ -407,41 +343,16 @@ fgseaRes_Stroma <- fgsea(pathways = pathways$genesets,
                         maxSize=500,
                         nperm=100000)
 # Export
-writexl::write_xlsx(fgseaRes_Stroma, "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Gexp/gexp_gene_pathways.xlsx")
+writexl::write_xlsx(fgseaRes_Stroma, "Textures/Images/Stroma/Gexp/gexp_gene_pathways.xlsx")
 # top 6 enriched pathways
 head(fgseaRes_Stroma[order(pval), ])
-# fgseaRes_Stroma[fgseaRes_Stroma$pathway==head(fgseaRes_Stroma[order(NES), ], 1)$pathway,]$leadingEdge
 
 
-# # FIRST
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_selectedpathways_first1.png", width = 6, height = 5, units = 'in', res = 300)
-# plotEnrichment(pathways$genesets[[head(fgseaRes_Stroma[order(-NES), ], 1)$pathway]],
-#                Ranks) + labs(title=head(fgseaRes_Stroma[order(-NES), ], 1)$pathway)
-# dev.off()
-
-# # LAST
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_selectedpathways_last1.png", width = 6, height = 5, units = 'in', res = 300)
-# plotEnrichment(pathways$genesets[[head(fgseaRes_Stroma[order(NES), ], 1)$pathway]],
-#                Ranks) + labs(title=head(fgseaRes_Stroma[order(NES), ], 1)$pathway)
-# dev.off()
-
-# number of significant pathways at padj < 0.01
-# sum(fgseaRes_Stroma[, pval < 0.01])
-
-# # plot the most significantly enriched pathway
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tabs-to-blast_selected_pathways_1.png", width = 6, height = 5, units = 'in', res = 300)
-# plotEnrichment(pathways$genesets[[head(fgseaRes_Stroma[order(pval), ], 1)$pathway]],
-#                Ranks) + labs(title=head(fgseaRes_Stroma[order(pval), ], 1)$pathway)
-# dev.off()
-
-# plot 20 most significantly enriched pathways
-# topPathwaysUp <- fgseaRes_Stroma[ES > 0][pval < 0.05][head(order(-NES), n=10), pathway]
-# topPathwaysDown <- fgseaRes_Stroma[ES < 0][pval < 0.05][head(order(NES), n=10), pathway]
 topPathwaysUp <- fgseaRes_Stroma[ES > 0][padj < 0.05][head(order(-NES), n=10), pathway]
 topPathwaysDown <- fgseaRes_Stroma[ES < 0][padj < 0.05][head(order(NES), n=10), pathway]
 topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
 
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Gexp/Stroma_gexp_top20_selectedpathways.png", width = 14, height = 4, units = 'in', res = 300)
+png("Textures/Images/Stroma/Gexp/Stroma_gexp_top20_selectedpathways.png", width = 14, height = 4, units = 'in', res = 300)
 plotGseaTable(pathways$genesets[topPathways], Ranks, fgseaRes_Stroma,
               colwidths = c(5, 4, 0.7, 0.7, 0.7),
               gseaParam = 0.5)
@@ -477,32 +388,7 @@ g <- ggplot(data = fgseaRes_res2, aes(x = reorder(pathway, NES), y = NES, fill =
     # legend.justification = "top",
     # legend.position = c(0.85, 0.1) )
     legend.position = "bottom" )
-ggsave(plot = g, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Gexp/Stroma_gexp_top20_selectedpathways_barplot.png", width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
-
-
-# # Export data
-# library(data.table)
-# fwrite(fgseaRes, file="/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/fgseaRes_Tabs.txt", sep="\t", sep2=c("", " ", ""))
-
-
-#  From the plot above one can see that there are very similar pathways in the table
-# (for example 5991502_Mitotic_Metaphase_and_Anaphase and 5991600_Mitotic_Anaphase).
-# To select only independent pathways one can use collapsePathways function:
-
-# collapsedPathways <- collapsePathways(fgseaRes_Stroma[order(1/abs(NES))][padj < 0.05], 
-#                                       pathways$genesets[topPathways], Ranks)
-# 
-# mainPathways <- fgseaRes_Stroma[pathway %in% collapsedPathways$mainPathways][
-#   order(-NES), pathway]
-# mainPathways
-
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_top20_selected_pathways_collapsed.png", width = 11, height = 3.5, units = 'in', res = 300)
-# plotGseaTable(pathways$genesets[mainPathways], Ranks, fgseaRes_Stroma, 
-#               # colwidths = c(5, 3.2, 0.5, 0.5, 0.5),
-#               colwidths = c(5, 4, 0.7, 0.7, 0.7),
-#               gseaParam = 0.5)
-# dev.off()
-
+ggsave(plot = g, filename = "Textures/Images/Stroma/Gexp/Stroma_gexp_top20_selectedpathways_barplot.png", width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
 
 
 
@@ -583,8 +469,8 @@ g2 <- ggplot(pvalue_df1, aes(log(fold_change1), -log10(pvalue))) +
                    # label.padding = 0.5,
                    segment.size = 1,
                    aes(label=genes), size = 5, fontface = "bold")
-ggsave(plot = g1, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Gexp/Stroma_gexp_volcano_p00001.png", width = 7, height = 7, units = 'in', dpi = 300)
-ggsave(plot = g2, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Gexp/Stroma_gexp_volcano_p000001.png", width = 7, height = 7, units = 'in', dpi = 300)
+ggsave(plot = g1, filename = "Textures/Images/Stroma/Gexp/Stroma_gexp_volcano_p00001.png", width = 7, height = 7, units = 'in', dpi = 300)
+ggsave(plot = g2, filename = "Textures/Images/Stroma/Gexp/Stroma_gexp_volcano_p000001.png", width = 7, height = 7, units = 'in', dpi = 300)
 
 
 
@@ -641,7 +527,7 @@ pvalue_df <- pvalue_df %>%
   )
 
 # Export
-writexl::write_xlsx(pvalue_df, "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Gexp/gexp_genes.xlsx")
+writexl::write_xlsx(pvalue_df, "Textures/Images/Stroma_WithNormal/Gexp/gexp_genes.xlsx")
 
 
 # GSEA
@@ -656,41 +542,16 @@ fgseaRes_Stroma <- fgsea(pathways = pathways$genesets,
                          maxSize=500,
                          nperm=100000)
 # Export
-writexl::write_xlsx(fgseaRes_Stroma, "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Gexp/gexp_gene_pathways.xlsx")
+writexl::write_xlsx(fgseaRes_Stroma, "Textures/Images/Stroma_WithNormal/Gexp/gexp_gene_pathways.xlsx")
 # top 6 enriched pathways
 head(fgseaRes_Stroma[order(pval), ])
-# fgseaRes_Stroma[fgseaRes_Stroma$pathway==head(fgseaRes_Stroma[order(NES), ], 1)$pathway,]$leadingEdge
 
 
-# # FIRST
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_selectedpathways_first1.png", width = 6, height = 5, units = 'in', res = 300)
-# plotEnrichment(pathways$genesets[[head(fgseaRes_Stroma[order(-NES), ], 1)$pathway]],
-#                Ranks) + labs(title=head(fgseaRes_Stroma[order(-NES), ], 1)$pathway)
-# dev.off()
-
-# # LAST
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_selectedpathways_last1.png", width = 6, height = 5, units = 'in', res = 300)
-# plotEnrichment(pathways$genesets[[head(fgseaRes_Stroma[order(NES), ], 1)$pathway]],
-#                Ranks) + labs(title=head(fgseaRes_Stroma[order(NES), ], 1)$pathway)
-# dev.off()
-
-# number of significant pathways at padj < 0.01
-# sum(fgseaRes_Stroma[, pval < 0.01])
-
-# # plot the most significantly enriched pathway
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tabs-to-blast_selected_pathways_1.png", width = 6, height = 5, units = 'in', res = 300)
-# plotEnrichment(pathways$genesets[[head(fgseaRes_Stroma[order(pval), ], 1)$pathway]],
-#                Ranks) + labs(title=head(fgseaRes_Stroma[order(pval), ], 1)$pathway)
-# dev.off()
-
-# plot 20 most significantly enriched pathways
-# topPathwaysUp <- fgseaRes_Stroma[ES > 0][pval < 0.05][head(order(-NES), n=10), pathway]
-# topPathwaysDown <- fgseaRes_Stroma[ES < 0][pval < 0.05][head(order(NES), n=10), pathway]
 topPathwaysUp <- fgseaRes_Stroma[ES > 0][padj < 0.05][head(order(-NES), n=10), pathway]
 topPathwaysDown <- fgseaRes_Stroma[ES < 0][padj < 0.05][head(order(NES), n=10), pathway]
 topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
 
-png("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Gexp/Stroma_gexp_top20_selectedpathways.png", width = 16, height = 4, units = 'in', res = 300)
+png("Textures/Images/Stroma_WithNormal/Gexp/Stroma_gexp_top20_selectedpathways.png", width = 16, height = 4, units = 'in', res = 300)
 plotGseaTable(pathways$genesets[topPathways], Ranks, fgseaRes_Stroma,
               colwidths = c(5, 4, 0.7, 0.7, 0.7),
               gseaParam = 0.5)
@@ -727,33 +588,7 @@ g <- ggplot(data = fgseaRes_res2, aes(x = reorder(pathway, NES), y = NES, fill =
     # legend.justification = "top",
     # legend.position = c(0.85, 0.1) )
     legend.position = "bottom" )
-ggsave(plot = g, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Gexp/Stroma_gexp_top20_selectedpathways_barplot.png", width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
-
-
-
-# # Export data
-# library(data.table)
-# fwrite(fgseaRes, file="/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/fgseaRes_Tabs.txt", sep="\t", sep2=c("", " ", ""))
-
-
-#  From the plot above one can see that there are very similar pathways in the table
-# (for example 5991502_Mitotic_Metaphase_and_Anaphase and 5991600_Mitotic_Anaphase).
-# To select only independent pathways one can use collapsePathways function:
-
-# collapsedPathways <- collapsePathways(fgseaRes_Stroma[order(1/abs(NES))][padj < 0.05], 
-#                                       pathways$genesets[topPathways], Ranks)
-# 
-# mainPathways <- fgseaRes_Stroma[pathway %in% collapsedPathways$mainPathways][
-#   order(-NES), pathway]
-# mainPathways
-
-# png("/Users/obruck/OneDrive - University of Helsinki/AML/NK translational/RNAseq/gsea/gsea_Tratio_top20_selected_pathways_collapsed.png", width = 11, height = 3.5, units = 'in', res = 300)
-# plotGseaTable(pathways$genesets[mainPathways], Ranks, fgseaRes_Stroma, 
-#               # colwidths = c(5, 3.2, 0.5, 0.5, 0.5),
-#               colwidths = c(5, 4, 0.7, 0.7, 0.7),
-#               gseaParam = 0.5)
-# dev.off()
-
+ggsave(plot = g, filename = "Textures/Images/Stroma_WithNormal/Gexp/Stroma_gexp_top20_selectedpathways_barplot.png", width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
 
 
 
@@ -834,8 +669,8 @@ g2 <- ggplot(pvalue_df1, aes(log(fold_change1), -log10(pvalue))) +
                    # label.padding = 0.5,
                    segment.size = 1,
                    aes(label=genes), size = 5, fontface = "bold")
-ggsave(plot = g1, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Gexp/Stroma_gexp_volcano_p000001.png", width = 7, height = 7, units = 'in', dpi = 300)
-ggsave(plot = g2, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Gexp/Stroma_gexp_volcano_p0000001.png", width = 7, height = 7, units = 'in', dpi = 300)
+ggsave(plot = g1, filename = "Textures/Images/Stroma_WithNormal/Gexp/Stroma_gexp_volcano_p000001.png", width = 7, height = 7, units = 'in', dpi = 300)
+ggsave(plot = g2, filename = "Textures/Images/Stroma_WithNormal/Gexp/Stroma_gexp_volcano_p0000001.png", width = 7, height = 7, units = 'in', dpi = 300)
 
 
 
@@ -849,10 +684,10 @@ ggsave(plot = g2, filename = "/Users/oscarbruck/OneDrive - University of Helsink
 
 
 # Read gexp results data
-pvalue_df_w_normal <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma_WithNormal/Gexp/gexp_genes.xlsx") %>%
+pvalue_df_w_normal <- read_xlsx("Textures/Images/Stroma_WithNormal/Gexp/gexp_genes.xlsx") %>%
   dplyr::mutate(FC = log(median1/median2))
 colnames(pvalue_df_w_normal)[2:ncol(pvalue_df_w_normal)] <- paste0(colnames(pvalue_df_w_normal)[2:ncol(pvalue_df_w_normal)], "_w_normal")
-pvalue_df_wo_normal <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Gexp/gexp_genes.xlsx") %>%
+pvalue_df_wo_normal <- read_xlsx("Textures/Images/Stroma/Gexp/gexp_genes.xlsx") %>%
   dplyr::mutate(FC = log(median1/median2))
 colnames(pvalue_df_wo_normal)[2:ncol(pvalue_df_wo_normal)] <- paste0(colnames(pvalue_df_wo_normal)[2:ncol(pvalue_df_wo_normal)], "_wo_normal")
 
@@ -936,5 +771,5 @@ g1 <- ggplot(pvalue_df, aes(FC_w_normal, FC_wo_normal, fill=Significance)) +  # 
         legend.margin=margin(),
         legend.key = element_rect(size = 5),
         legend.key.size = unit(1.5, 'lines'))
-ggsave(plot = g1, filename = "/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Stroma/Stroma_w_vs_wo_normal_scatter.png", width = 6, height = 7, units = 'in', dpi = 300)
+ggsave(plot = g1, filename = "Textures/Images/Stroma/Stroma_w_vs_wo_normal_scatter.png", width = 6, height = 7, units = 'in', dpi = 300)
       

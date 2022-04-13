@@ -1,5 +1,7 @@
 rm(list=ls())
 
+print("Start Textures/Scripts/Margin/Margin_lymphocyte_clinical.R")
+
 # Load libraries
 library(readxl)
 library(tidyverse)
@@ -16,8 +18,9 @@ library(survminer)
 ############################# LOAD DATA ##########################################################################################################
 
 
-# Otso's data
-tcga_kirc <- read_xlsx("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/otso/raw_data.xlsx")
+# Image data
+tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
+
 
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
@@ -36,7 +39,6 @@ tcga_kirc$`non_margin_texture_other_%` <- 100*tcga_kirc$non_margin_texture_other
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(is.na(PoorQuality)) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 # Save
@@ -47,8 +49,6 @@ tcga_kirc0 <- tcga_kirc
 
 
 # Rename
-# colnames(tcga_kirc)[grep(pattern = "[[:print:]]{0,4}margin_texture_[[:print:]]*%", colnames(tcga_kirc))] <- c("Margin_Blood", "NonMargin_Blood", "Margin_Cancer", "NonMargin_Cancer", "Margin_Normal", "NonMargin_Normal", "Margin_Stroma", "NonMargin_Stroma", "Margin_Other", "NonMargin_Other")
-# textures <- c("Margin_Blood", "NonMargin_Blood", "Margin_Normal", "NonMargin_Normal", "Margin_Stroma", "NonMargin_Stroma", "Margin_Other", "NonMargin_Other")
 colnames(tcga_kirc)[grep(pattern = "^inf_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other")
 colnames(tcga_kirc)[grep(pattern = "^inf_non_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("NonMargin_Blood", "NonMargin_Cancer", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other")
 margin <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other")
@@ -57,7 +57,7 @@ textures <- c(margin, nonmargin)
 
 
 # Petri's data
-df <- readRDS("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Data/petri/KIRC.fm.rds")
+df <- readRDS("../data/clinical_transcriptome.rds")
 # Filter patients
 df <- df %>%
   dplyr::select(one_of(tcga_kirc$tcga_id))
@@ -255,9 +255,6 @@ to_hotencode_var <- cbind(tcga_kirc %>% dplyr::select(tcga_id) %>% dplyr::rename
 # To percent
 tcga_kirc[textures] <- sapply(tcga_kirc[textures], function(x) 100*x)
 
-# Factor IDs
-# tcga_kirc <- tcga_kirc %>% arrange(Cancer) %>% dplyr::mutate(tcga_id = factor(tcga_id))
-# tcga_kirc <- tcga_kirc %>% mutate(tcga_id = factor(Cancer, levels = Cancer))
 
 # Melt longer
 tcga_kirc_long <- tcga_kirc %>%
@@ -344,9 +341,6 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
     which(colnames(df) == deparse(substitute(thecolumnname)))
   }
   
-  # # Find variables with 2 values excluding NA
-  # unique_values_2 = sapply(tcga_kirc[(findcolnumber(tcga_kirc, Age)+1):(ncol(tcga_kirc)-1)], function(x) length(unique(x[!is.na(x)])))
-  # unique_values_2 = names(unique_values_2[unique_values_2==2])
   
   
   # Find variables with 2 values excluding NA
@@ -394,7 +388,7 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
   
   
   # Export data
-  writexl::write_xlsx(pvalue_df, paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", texture1, "_clinical.xlsx"))
+  writexl::write_xlsx(pvalue_df, paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", texture1, "_clinical.xlsx"))
   
   # Filter variables with p_adjusted1 < 0.10
   vars <- pvalue_df %>%
@@ -402,8 +396,9 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
     dplyr::select(genes) %>%
     dplyr::mutate(genes = gsub("_[[:print:]]*", "", genes)) %>%
     dplyr::distinct()
-  # tmp <- data.frame(twos); tmp <- rbind(tmp, data.frame(threes) %>% rename(twos = threes)); tmp <- rbind(tmp, data.frame(fours) %>% rename(twos = fours))
+  
   tmp = data.frame(twos = unique_values_2)
+  
   for (i in vars$genes) {
     a <- tmp %>% dplyr::filter(str_detect(twos, i))
     ## Join
@@ -468,7 +463,7 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
           # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
           y.position = 1.05*a
         )
-      ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", two1, "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
+      ggsave(plot = g, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", two1, "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
       
     } else if (length(unique(tcga_kirc1$two1)) == 3) {
       
@@ -495,7 +490,7 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
           # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
           y.position = c(1.0*a, 1.15*a, 1.075*a)
         )
-      ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", two1, "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
+      ggsave(plot = g, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", two1, "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
       
     } else if (length(unique(tcga_kirc1$two1)) == 4) {
       
@@ -519,10 +514,11 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
           label = "p",
           bracket.size = 1.5,
           size = 5,
-          # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
           y.position = c(1.16*a, 1.32*a, 1.40*a, 1.0*a, 1.24*a, 1.08*a)
         )
-      ggsave(plot = g, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", two1, "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
+      ggsave(plot = g, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", two1, "_", texture1, "_clin.png"), width = 5, height = 5, units = 'in', dpi = 300)
+      
+      gc(verbose = FALSE)
       
     }
     
@@ -541,7 +537,8 @@ df1 <- df[grep(pattern = "N:SAMP:", x = rownames(df)),]
 df1 <- df1 %>% rownames_to_column()
 df1 <- df1[apply(df1[,-1], 1, function(x) !all(x==0)),]
 df1 <- df1[apply(df1[,-1], 1, function(x) !all(x==1)),]
-df1 <- df1 %>% filter_all(any_vars(!is.na(.)))
+# df1 <- df1 %>% filter_all(any_vars(!is.na(.)))
+df1 <- df1 %>% dplyr::filter(!is.na(rowname))
 df2 <- df1 %>% 
   pivot_longer(!rowname, names_to = "col1", values_to = "col2") %>% 
   pivot_wider(names_from = "rowname", values_from = "col2") %>%
@@ -620,7 +617,7 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
              font.legend = c(12, "bold", "black"),    #font voi olla esim. "bold" tai "plain"
              legend.labs = c("Low", "Intermediate", "High"),
              size = 1)  # change line size
-  ggsave(plot = print(g), filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/KM_Ly_in_margin_vs_nonmargin_FC_", texture1, "_.png"), width = 6, height = 6, units = 'in', dpi = 300)
+  ggsave(plot = print(g), filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/KM_Ly_in_margin_vs_nonmargin_FC_", texture1, "_.png"), width = 6, height = 6, units = 'in', dpi = 300)
   
 }
 
@@ -639,7 +636,7 @@ tcga_kirc0 <- tcga_kirc
 # Read statistics
 if (exists("pvalue_df0")) {rm(pvalue_df0)}
 for (texture1 in c("Blood", "Stroma", "Normal", "Other")) {
-  pvalue_df <- read_xlsx(paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", texture1, "_clinical.xlsx"))
+  pvalue_df <- read_xlsx(paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", texture1, "_clinical.xlsx"))
   pvalue_df$Texture = texture1
   if (exists("pvalue_df0")) {
     pvalue_df0 <- rbind(pvalue_df0, pvalue_df)
@@ -647,14 +644,6 @@ for (texture1 in c("Blood", "Stroma", "Normal", "Other")) {
     pvalue_df0 <- pvalue_df
   }
 }
-
-# # Find variables with 2 values excluding NA
-# unique_values_1 = sapply(tcga_kirc0[colnames(tcga_kirc0) %in% colnames(df2)[2:ncol(df2)]], function(x) length(unique(x[!is.na(x)])))
-# unique_values_1 = names(unique_values_1[unique_values_1==2])
-# unique_values_0 = unique_values_1[c(1:57, 72:81)]
-# unique_values_1 = unique_values_1[-c(1:57, 72:81)]
-# unique_values_2 = sapply(tcga_kirc0[which(colnames(tcga_kirc0)=="grade"):(ncol(tcga_kirc0)-1)], function(x) length(unique(x[!is.na(x)])))
-# unique_values_2 = names(unique_values_2[unique_values_2==2])
 
 # Find variables with 2 values excluding NA
 unique_values_0 = unique_values_2[40:85]
@@ -745,7 +734,7 @@ for (unique_value_name in 1:length(list(unique_values_0, unique_values_1))) {
           legend.title = element_text(size=12, colour="black", face="bold"))
   p
   
-  ggsave(plot = p, filename = paste0("/Users/oscarbruck/OneDrive - University of Helsinki/RCC/Otso/Analysis/Textures/Images/Margin/Margin_balloonplot/Balloonplot_Ly_", unique_value_name, ".png"), width = 5, height = nrow(pvalue_df1)/25, units = 'in', dpi = 300)
+  ggsave(plot = p, filename = paste0("Textures/Images/Margin/Margin_balloonplot/Balloonplot_Ly_", unique_value_name, ".png"), width = 5, height = nrow(pvalue_df1)/25, units = 'in', dpi = 300)
   
 }
 
