@@ -1,8 +1,8 @@
-# Welcome to the data analysis repository of the "Integrative Analysis of Tissue Textures and Lymphocyte Infiltration in Renal Cell Carcinoma using Deep Learning" by Brummer Otso et al.
+# Integrative Analysis of Tissue Textures and Lymphocyte Infiltration in Renal Cell Carcinoma using Deep Learning
 
 
 ## BACKGROUND
-These codes will help you reproduce all plots and statistical analyses of the publication.  
+These codes will help you reproduce all plots and statistical analyses of the publication "Integrative Analysis of Tissue Textures and Lymphocyte Infiltration in Renal Cell Carcinoma using Deep Learning" by Brummer Otso et al.  
 
 
 ## USEFUL LINKS
