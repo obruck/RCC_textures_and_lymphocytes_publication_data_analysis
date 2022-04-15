@@ -6,9 +6,9 @@ These codes will help you reproduce all plots and statistical analyses of the pu
 
 
 ## USEFUL LINKS
-**CODE** &emsp;   &emsp;   &emsp;  The [codes](https://version.helsinki.fi/hus_hematology/tcga-kirc-immunology) to reproduce the texture and lymphocyte data.  
-**DATA** &emsp;   &emsp;   &emsp;  The annotated image data are located in [Zenodo](https://zenodo.org/deposit/6384627).  
-**VISUALIZATION** &nbsp; The [TissUUmaps platform](http://hruh-20.it.helsinki.fi/rcc_texture_lymphocytes/) to visualize the texture and lymphocyte data.
+**CODE** &emsp; &emsp; &emsp; The [codes](https://version.helsinki.fi/hus_hematology/tcga-kirc-immunology) to reproduce the texture and lymphocyte data.  
+**DATA** &emsp; &emsp; &emsp; &emsp; &emsp; The annotated image data are located in [Zenodo](https://zenodo.org/deposit/6384627).  
+**VISUALIZATION** &nbsp;  &nbsp; The [TissUUmaps platform](http://hruh-20.it.helsinki.fi/rcc_texture_lymphocytes/) to visualize the texture and lymphocyte data.
 
 
 
