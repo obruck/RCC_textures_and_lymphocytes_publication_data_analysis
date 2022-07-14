@@ -10,6 +10,7 @@ library(ggplot2)
 library(RColorBrewer)
 library(corrplot)
 library(psych)
+library(ggpubr)
 
 
 ############################# LOAD DATA ##########################################################################################################
@@ -32,25 +33,74 @@ tcga_kirc <- tcga_kirc %>%
 
 
 
+# Filter centers with too much/little lymphocytes than expected
+## Cureline B4
+## UNC B8
+## Christiana Healthcare B2
+## MD Anderson CJ
+## Fox Chase AK
+## Mary Bird Perkins Cancer Center - Our Lady of the Lake 3Z
+## St. Joseph's Medical Center-(MD) AS
+## International Genomics Consortium A3
+# tcga_kirc <- tcga_kirc %>%
+#   dplyr::filter(!tissue_source_site %in% c("AK", "CJ", "B2") )
+tcga_kirc1 <- tcga_kirc
+
+
 ############################# PLOT ##########################################################################################################
 
-# Rename
+
+
+## TEXTURES
+## Rename
 colnames(tcga_kirc)[grep(pattern = "^inf_bin", colnames(tcga_kirc))] <- c("Ly/Blood", "Ly/Cancer", "Ly/Normal", "Ly/Stroma", "Ly/Other")
 colnames(tcga_kirc)[grep(pattern = "^texture_[[:print:]]*%", colnames(tcga_kirc))] <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
 tcga_kirc$`Ly/Total` = tcga_kirc$`Ly/Blood` + tcga_kirc$`Ly/Cancer` + tcga_kirc$`Ly/Normal` + tcga_kirc$`Ly/Stroma` + tcga_kirc$`Ly/Other`
-textures <- c("Blood", "Cancer", "Stroma", "Other", "Ly/Total", "Ly/Blood", "Ly/Cancer", "Ly/Stroma", "Ly/Other")
+textures <- c("Blood", "Cancer", "Normal", "Stroma", "Other", "Ly/Total", "Ly/Blood", "Ly/Cancer", "Ly/Normal", "Ly/Stroma", "Ly/Other")
 
 
-# Quantity
-# Normalize in all textures (= values to equal 100%)
+## Quantity
+## Normalize in all textures (= values to equal 100%)
 tcga_kirc[textures] <- sapply(tcga_kirc[textures], function(x) x*100)  # 100 = 100%, 5 = 5 textures so max is 500% which looks weird in the plot
 
 
 
-# Correlation matrix
+## Correlation matrix
 cor_table <- corr.test(tcga_kirc[textures], adjust = "none", ci=F, method = "spearman")
 r <- cor_table$r
 p <- cor_table$p
+
+
+
+# # LYMPHOCYTES
+# ## Rename
+# colnames(tcga_kirc1)[grep(pattern = "^inf_bin", colnames(tcga_kirc1))] <- c("Ly/Blood", "Ly/Cancer", "Ly/Normal", "Ly/Stroma", "Ly/Other")
+# colnames(tcga_kirc1)[grep(pattern = "^texture_[[:print:]]*%", colnames(tcga_kirc1))] <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
+# tcga_kirc1$`Ly/Total` = tcga_kirc1$`Ly/Blood` + tcga_kirc1$`Ly/Cancer` + tcga_kirc1$`Ly/Normal` + tcga_kirc1$`Ly/Stroma` + tcga_kirc1$`Ly/Other`
+# textures <- c("Blood", "Cancer", "Normal", "Stroma", "Other", "Ly/Total", "Ly/Blood", "Ly/Cancer", "Ly/Normal", "Ly/Stroma", "Ly/Other")
+# 
+# 
+# ## Quantity
+# ## Normalize in all textures (= values to equal 100%)
+# tcga_kirc1[textures] <- sapply(tcga_kirc1[textures], function(x) x*100)  # 100 = 100%, 5 = 5 textures so max is 500% which looks weird in the plot
+# 
+# 
+# 
+# ## Correlation matrix
+# cor_table <- corr.test(tcga_kirc1[textures], adjust = "none", ci=F, method = "spearman")
+# r1 <- cor_table$r
+# p1 <- cor_table$p
+# 
+# 
+# 
+# 
+# # Replace the lymphocyte values of r and p by r1 and p1
+# r[6:11,6:11] <- r1[6:11,6:11]
+# p[6:11,6:11] <- p1[6:11,6:11]
+
+
+
+
 
 
 # Plot
@@ -66,7 +116,7 @@ corrplot(r %>% round(2),
          order="hclust",
          addCoef.col = "black", # Add coefficient of correlation
          hclust.method="ward.D2",
-         cl.pos="b",
+         cl.pos="r",  # b, l, r, t
          tl.cex=0.8,
          tl.srt=45, #Text label color and rotation
          p.mat = p,

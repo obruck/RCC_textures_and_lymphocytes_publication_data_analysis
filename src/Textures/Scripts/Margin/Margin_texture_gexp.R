@@ -37,6 +37,7 @@ tcga_kirc$`non_margin_texture_other_%` <- 100*tcga_kirc$non_margin_texture_other
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
+  dplyr::filter(`texture_normal_%` > 1) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 tcga_kirc0 <- tcga_kirc
 
@@ -86,11 +87,11 @@ tcga_kirc_nonmargin <- tcga_kirc_long %>%
 tcga_kirc_wide <- tcga_kirc_margin %>%
   full_join(tcga_kirc_nonmargin) %>%
   mutate(FC = Margin/NonMargin,
-         FC = ifelse(FC == "Inf", 10,
+         FC = ifelse(FC == "Inf", (Margin+1)/(NonMargin+1),
                      ifelse(FC > 10, 10,
                             ifelse(FC < 0.1, 0.1, FC))))
 
-# Read mutation data
+# Read transcriptome data
 tcga_kirc <- readRDS("../data/clinical_transcriptome.rds") %>%
   dplyr::select(one_of(tcga_kirc_wide$ID)) %>%
   rownames_to_column() %>%
@@ -102,15 +103,14 @@ tcga_kirc <- tcga_kirc %>%
   pivot_wider(names_from = "rowname", values_from = "col2") %>%
   dplyr::rename(tcga_id = col1)
 
-# Keep only genes with highest var/mean
-a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) abs(var(x, na.rm = TRUE)))
-a <- tail(a[order(a)], 5000)
+# Keep only genes with highest median
+a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) median(x, na.rm = TRUE) > 8)
+a <- a[a]
 tcga_kirc <- tcga_kirc %>% dplyr::select(tcga_id, one_of(names(a)))
 
 # Join
 tcga_kirc <- tcga_kirc_wide %>%
   dplyr::inner_join(tcga_kirc %>% dplyr::rename(ID = tcga_id))
-
 
 
 ############################# Genesets ##########################################################################################################
@@ -208,7 +208,7 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
   
   
   # GSEA
-  Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = log(median1/median2)) %>% dplyr::filter(!is.na(FC) & pvalue<0.05)
+  Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = log(median1/median2)) %>% dplyr::filter(!is.na(FC) & pvalue<0.05 & ((median1+median2)/2)>8)
   # Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = 1/pvalue) %>% dplyr::filter(!is.na(FC))
   Ranks <- Ranks_tmp %>% dplyr::select(FC)
   Ranks <- setNames(object = Ranks$FC, nm = Ranks_tmp$genes)
@@ -217,7 +217,7 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
                           stats = Ranks,
                           minSize=15,
                           maxSize=500,
-                          nperm=100000)
+                          nperm=10000)
   # top 6 enriched pathways
   head(fgseaRes_blood[order(pval), ])
   
@@ -262,10 +262,7 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
       legend.position = "bottom" )
   ggsave(plot = g, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_pathways_barplot.png"), width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
   
-  
-  
-  
-  
+
   
   # Prepare data for volcanoplot
   pvalue_df1 <- pvalue_df %>% mutate(
@@ -276,9 +273,6 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
     sig1 = ifelse(pvalue<0.01, 1, 0),
     sig2 = ifelse(pvalue<0.01 & fold_change1 > 1, "p<0.01 & FC>1",
                   ifelse(pvalue<0.01 & fold_change1 < 1, "p<0.01 & FC<1", "ns"))
-    # sig_adj1 = ifelse(p_adjusted<0.05, "FDR", "ns"),
-    # sig_adj2 = ifelse(p_adjusted<0.05 & fold_change1 > 1, "FDR<0.05 & FC>1",
-    # ifelse(p_adjusted<0.05 & fold_change1 < 1, "FDR<0.05 & FC<1", "ns"))
   ) %>%
     mutate(sig1 = as.factor(sig1))
   
@@ -297,9 +291,8 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
     values = c("grey", "blue", "red")
   }
   
+  
   # Plot
-  # png(paste0("/Users/oscarbruck/OneDrive - University of Helsinki/Tutkimus/Projekteja/MDS/Analysis/HE/Results/Volcanoplot_mIHC_singlemarker_", dico, ".png"),
-  # width = 9, height = 9, units = 'in', res = 300)
   g1 <- ggplot(pvalue_df1, aes(log(fold_change1), -log10(pvalue))) +
     geom_point(aes(fill=sig2), pch = 21, color = "black", size = 4) +
     labs(x="Fold change (Log)", y="Log10 p-value") +
@@ -383,11 +376,32 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
                      # label.padding = 0.5,
                      segment.size = 1,
                      aes(label=genes), size = 5, fontface = "bold")
+  g5 <- ggplot(pvalue_df1, aes(log(fold_change1), -log10(pvalue))) +
+    geom_point(aes(fill=sig2), pch = 21, color = "black", size = 4) +
+    labs(x="Fold change (Log)", y="Log10 p-value") +
+    theme_bw() +
+    theme(axis.title.y = element_text(size = 15, face = "bold"),
+          axis.title.x = element_text(size = 15, face = "bold"),
+          axis.text.y = element_text(size = 15, face = "bold"),
+          axis.text.x = element_text(size = 15, face = "bold"),
+          legend.title = element_text(size = 15, face = "bold"),
+          legend.text = element_text(size = 15, face = "bold"),
+          legend.direction = 'horizontal', 
+          legend.position = 'bottom',
+          legend.key = element_rect(size = 5),
+          legend.key.size = unit(1.5, 'lines')) +
+    scale_fill_manual(name="Significance", values=values) +
+    geom_vline(xintercept=0, linetype="dashed", color = "black", size=1) +
+    geom_label_repel(data=pvalue_df1[pvalue_df1$pvalue<0.00001,],
+                     # label.padding = 0.5,
+                     segment.size = 1,
+                     aes(label=genes), size = 5, fontface = "bold")
   
   ggsave(plot = g1, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p0005.png"), width = 7, height = 7, units = 'in', dpi = 300)
   ggsave(plot = g2, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p0001.png"), width = 7, height = 7, units = 'in', dpi = 300)
   ggsave(plot = g3, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p00005.png"), width = 7, height = 7, units = 'in', dpi = 300)
   ggsave(plot = g4, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p00001.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g5, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Gexp/", texture1, "_gexp_volcano_p000001.png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 

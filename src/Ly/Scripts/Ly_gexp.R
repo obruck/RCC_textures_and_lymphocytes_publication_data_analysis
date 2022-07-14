@@ -39,15 +39,45 @@ tcga_kirc$`non_margin_texture_stroma_%` <- 100*tcga_kirc$non_margin_texture_stro
 tcga_kirc$`non_margin_texture_other_%` <- 100*tcga_kirc$non_margin_texture_other / (tcga_kirc$non_margin_texture_blood + tcga_kirc$non_margin_texture_cancer + tcga_kirc$non_margin_texture_normal + tcga_kirc$non_margin_texture_stroma + tcga_kirc$non_margin_texture_other)
 tcga_kirc$inf_bin_lymphocytes_total <- (tcga_kirc$bin_lymphocytes_blood + tcga_kirc$bin_lymphocytes_normal + tcga_kirc$bin_lymphocytes_cancer + tcga_kirc$bin_lymphocytes_stroma + tcga_kirc$bin_lymphocytes_other) / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 
-# Filter samples with >5% cancer and <1% normal tissue
+# Filter samples with >5% cancer normal tissue
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
-  dplyr::filter(`texture_normal_%` < 1) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
+# Keep only centers with >20 samples
+n <- tcga_kirc %>%
+  group_by(tissue_source_site) %>%
+  summarise(n=n()) %>%
+  dplyr::filter(n>=20) %>%
+  dplyr::filter(!tissue_source_site %in% c("AK")) 
 
-# Filter Fox Chase, MD Anderson, Mary Bird Perkins Cancer Center - Our Lady of the Lake and St. Joseph's Medical Center-(MD)
-tcga_kirc <- tcga_kirc %>% dplyr::filter(!tissue_source_site %in% c("3Z", "AK", "CJ", "AS") )
+tcga_kirc <- tcga_kirc %>%
+  dplyr::filter(tissue_source_site %in% n$tissue_source_site)
+
+# Filter centers with too much/little lymphocytes than expected
+# 3Z	Mary Bird Perkins Cancer Center - Our Lady of the Lake
+# 6D	University of Oklahoma HSC
+# A3	International Genomics Consortium
+# AK	Fox Chase
+# AS	St. Joseph's Medical Center-(MD)
+# B0	University of Pittsburgh
+# B2	Christiana Healthcare
+# B4	Cureline
+# B8	UNC
+# BP	MSKCC
+# CB	ILSBio
+# CJ	MD Anderson Cancer Center
+# CW	Mayo Clinic - Rochester
+# CZ	Harvard
+# DV	NCI Urologic Oncology Branch
+# EU	CHI-Penrose Colorado
+# G6	Roswell Park
+# GK	ABS - IUPUI
+# MM	BLN - Baylor
+# MW	University of Miami
+# T7	Molecular Response
+# V8	Medical College of Georgia
+# WM	University of Kansas
 
 
 ############################# MODIFY CLINICAL DATA ##########################################################################################################
@@ -55,8 +85,10 @@ tcga_kirc <- tcga_kirc %>% dplyr::filter(!tissue_source_site %in% c("3Z", "AK", 
 
 # Rename
 colnames(tcga_kirc)[grep(pattern = "^inf_bin_lymphocytes_[[:print:]]*", colnames(tcga_kirc))] <- c("Blood", "Cancer", "Normal", "Stroma", "Other", "Total")
-# textures <- c("Blood", "Cancer", "Normal", "Stroma", "Other", "Total")
-textures <- c("Blood", "Cancer", "Stroma", "Other", "Total")
+textures <- c("Blood", "Cancer", "Normal", "Stroma", "Other", "Total")
+# textures <- c("Blood", "Cancer", "Stroma", "Other", "Total")
+
+
 
 # Save
 tcga_kirc0 <- tcga_kirc
@@ -73,10 +105,9 @@ tcga_kirc <- tcga_kirc %>%
   pivot_wider(names_from = "rowname", values_from = "col2") %>%
   dplyr::rename(tcga_id = col1)
 
-# Keep only genes with highest var/mean
-
-a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) abs(var(x, na.rm = TRUE)))
-a <- tail(a[order(a)], 5000)
+# Keep only genes with highest median
+a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) median(x, na.rm = TRUE) > 8)
+a <- a[a]
 tcga_kirc <- tcga_kirc %>% dplyr::select(tcga_id, one_of(names(a)))
 
 # Join
@@ -123,13 +154,35 @@ findcolnumber <- function(df, thecolumnname){
 ## Save data
 tcga_kirc0 <- tcga_kirc
 
+
+# Loop gexp analyses over textures
 for (texture1 in textures) {
+  # texture1 = textures[1]
   print(texture1)
   
   # Reset data
-  tcga_kirc <- tcga_kirc0
-  tcga_kirc$FC <- ifelse(tcga_kirc[[texture1]] > median(tcga_kirc[[texture1]], na.rm = TRUE), "High", "Low")
+  if (texture1 == "Normal") {
     
+    tcga_kirc <- tcga_kirc0 %>%
+      dplyr::filter(`texture_normal_%` > 1)
+    
+  } else {
+    
+    tcga_kirc <- tcga_kirc0
+    
+  }
+  
+  
+  # Divide patients into low and high by clinical centers
+  tcga_kirc$tmp <- tcga_kirc[[texture1]]
+  tcga_kirc <- tcga_kirc %>%
+    group_by(tissue_source_site) %>%
+    mutate(FC = (tmp > median(tmp, na.rm = TRUE)) + 1) %>%
+    mutate(FC = ifelse(FC == 2, "High", "Low")) %>%
+    dplyr::select(-tmp) %>%
+    ungroup()
+  
+  
   # Multiple comparison (two-sided, unpaired, Mann-Whitney U test)
   # gexp_data <- tcga_kirc[(findcolnumber(tcga_kirc, tissue_source_site)+1):ncol(tcga_kirc)]
   multiple_t_tests_p_value <- lapply(tcga_kirc[grep(pattern = "GEXP", colnames(tcga_kirc))],
@@ -154,37 +207,41 @@ for (texture1 in textures) {
   rownames(pvalue_df) = NULL
   
   
-  
-  # Export data
-  writexl::write_xlsx(pvalue_df, paste0("Ly/Images/Gexp/Ly_", texture1, "_gexp.xlsx"))
-  
-  
-  
-  
   # Rename variables
   pvalue_df <- pvalue_df %>%
     mutate(genes = gsub("N:GEXP:", "", genes)
     )
   
+  # Export data
+  writexl::write_xlsx(pvalue_df, paste0("Ly/Images/Gexp/Ly_", texture1, "_gexp.xlsx"))
+  
   
   # GSEA
-  Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = log(median1/median2)) %>% dplyr::filter(!is.na(FC) & pvalue<0.05)
+  Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = log(median1/median2)) %>% dplyr::filter(!is.na(FC) & pvalue<0.05 & ((median1+median2)/2)>8)
+  # pvalue_df %>% dplyr::filter(str_detect(genes, "GZM|PRF1|IFNG|HLA-"))
   Ranks <- Ranks_tmp %>% dplyr::select(FC)
   Ranks <- setNames(object = Ranks$FC, nm = Ranks_tmp$genes)
   names(pathways$genesets) <- pathways$geneset.names
   fgseaRes_blood <- fgsea(pathways = pathways$genesets,
                           stats = Ranks,
-                          minSize=15,
+                          minSize=10,
                           maxSize=500,
-                          nperm=100000)
+                          nperm=10000)
   # top 6 enriched pathways
   head(fgseaRes_blood[order(pval), ])
+  
+  # Export data
+  writexl::write_xlsx(fgseaRes_blood, paste0("Ly/Images/Gexp/Ly_", texture1, "_gexp_pathways.xlsx"))
+  
   
   # plot 20 most significantly enriched pathways
   topPathwaysUp <- fgseaRes_blood[ES > 0][padj < 0.05][head(order(-NES), n=10), pathway]
   topPathwaysDown <- fgseaRes_blood[ES < 0][padj < 0.05][head(order(NES), n=10), pathway]
+  # topPathwaysUp <- fgseaRes_blood[ES > 0][pval < 0.05][head(order(-NES), n=10), pathway]
+  # topPathwaysDown <- fgseaRes_blood[ES < 0][pval < 0.05][head(order(NES), n=10), pathway]
   topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
   
+  # Plot
   png(paste0("Ly/Images/Gexp/", texture1, "_gexp_top20_selectedpathways.png"), width = 18.5, height = 3.5, units = 'in', res = 300)
   plotGseaTable(pathways$genesets[topPathways], Ranks, fgseaRes_blood,
                 colwidths = c(5, 4, 0.7, 0.7, 0.7),
@@ -250,6 +307,12 @@ for (texture1 in textures) {
   }
   # values = c("white", "blue", "red")
   
+  # Remove one outlier in Blood
+  if (texture1 == "Blood") {
+    pvalue_df1 <- pvalue_df1 %>%
+      dplyr::mutate(fold_change1 = ifelse(fold_change1 < 0.7, 1, fold_change1))
+  }
+  
   # Plot
   g1 <- ggplot(pvalue_df1, aes(log(fold_change1), -log10(pvalue))) +
     geom_point(aes(fill=sig2), pch = 21, color = "black", size = 4) +
@@ -267,7 +330,7 @@ for (texture1 in textures) {
           legend.key.size = unit(1.5, 'lines')) +
     scale_fill_manual(name="Significance", values=values) +
     geom_vline(xintercept=0, linetype="dashed", color = "black", size=1) +
-    geom_label_repel(data=pvalue_df1[pvalue_df1$pvalue<0.005,],
+    geom_label_repel(data=pvalue_df1[pvalue_df1$pvalue<0.005 & pvalue_df1$fold_change1 != 1,],
                      # label.padding = 0.5,
                      segment.size = 1,
                      aes(label=genes), size = 5, fontface = "bold")
@@ -288,7 +351,7 @@ for (texture1 in textures) {
           legend.key.size = unit(1.5, 'lines')) +
     scale_fill_manual(name="Significance", values=values) +
     geom_vline(xintercept=0, linetype="dashed", color = "black", size=1) +
-    geom_label_repel(data=pvalue_df1[pvalue_df1$pvalue<0.001,],
+    geom_label_repel(data=pvalue_df1[pvalue_df1$pvalue<0.001 & pvalue_df1$fold_change1 != 1,],
                      # label.padding = 0.5,
                      segment.size = 1,
                      aes(label=genes), size = 5, fontface = "bold")
@@ -309,7 +372,7 @@ for (texture1 in textures) {
           legend.key.size = unit(1.5, 'lines')) +
     scale_fill_manual(name="Significance", values=values) +
     geom_vline(xintercept=0, linetype="dashed", color = "black", size=1) +
-    geom_label_repel(data=pvalue_df1[pvalue_df1$pvalue<0.0005,],
+    geom_label_repel(data=pvalue_df1[pvalue_df1$pvalue<0.0005 & pvalue_df1$fold_change1 != 1,],
                      # label.padding = 0.5,
                      segment.size = 1,
                      aes(label=genes), size = 5, fontface = "bold")
@@ -330,7 +393,7 @@ for (texture1 in textures) {
           legend.key.size = unit(1.5, 'lines')) +
     scale_fill_manual(name="Significance", values=values) +
     geom_vline(xintercept=0, linetype="dashed", color = "black", size=1) +
-    geom_label_repel(data=pvalue_df1[pvalue_df1$pvalue<0.0001,],
+    geom_label_repel(data=pvalue_df1[pvalue_df1$pvalue<0.0001 & pvalue_df1$fold_change1 != 1,],
                      # label.padding = 0.5,
                      segment.size = 1,
                      aes(label=genes), size = 5, fontface = "bold")
@@ -341,4 +404,201 @@ for (texture1 in textures) {
   ggsave(plot = g4, filename = paste0("Ly/Images/Gexp/", texture1, "_gexp_volcano_p00001.png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
+
+
+
+
+
+
+
+
+##################################
+####### CANCER VS. STROMA ########
+##################################
+
+
+# Read gexp results data
+pvalue_df_w_normal <- read_xlsx("Ly/Images/Gexp/Ly_Cancer_gexp.xlsx") %>%
+  dplyr::mutate(FC = log(median1/median2))
+colnames(pvalue_df_w_normal)[2:ncol(pvalue_df_w_normal)] <- paste0(colnames(pvalue_df_w_normal)[2:ncol(pvalue_df_w_normal)], "_Cancer")
+pvalue_df_wo_normal <- read_xlsx("Ly/Images/Gexp/Ly_Stroma_gexp.xlsx") %>%
+  dplyr::mutate(FC = log(median1/median2))
+colnames(pvalue_df_wo_normal)[2:ncol(pvalue_df_wo_normal)] <- paste0(colnames(pvalue_df_wo_normal)[2:ncol(pvalue_df_wo_normal)], "_Stroma")
+
+# Join
+pvalue_df <- full_join(pvalue_df_w_normal, pvalue_df_wo_normal)
+
+# Modify
+pvalue_df <- pvalue_df %>%
+  dplyr::mutate(
+    Significance = ifelse(pvalue_Cancer < 0.01 & pvalue_Stroma < 0.01, "C&S P<0.01",
+                          ifelse(pvalue_Cancer < 0.01, "Cancer P<0.01",
+                                 ifelse(pvalue_Stroma < 0.01, "Stroma P<0.01", "P>0.01"))),
+    Significance = factor(Significance, levels = c("Cancer P<0.01", "Stroma P<0.01", "C&S P<0.01", "P>0.01")),
+    Sig = ifelse(Significance == "P>0.01", 1, 21),
+    Sig = factor(Sig),
+    genes = gsub("N:GEXP:", "", genes)
+  )
+
+# Find 20 genes with lowest p value
+a1 <- pvalue_df %>% 
+  dplyr::filter(pvalue_Cancer < 0.01) %>%
+  arrange(desc(FC_Cancer)) %>%
+  slice(1:10)
+a2 <- pvalue_df %>% 
+  dplyr::filter(pvalue_Stroma < 0.01) %>%
+  arrange(desc(FC_Stroma)) %>%
+  slice(1:10)
+a3 <- pvalue_df %>% 
+  dplyr::filter(pvalue_Cancer < 0.01) %>%
+  arrange(desc(-FC_Cancer)) %>%
+  slice(1:10)
+a4 <- pvalue_df %>% 
+  dplyr::filter(pvalue_Stroma < 0.01) %>%
+  arrange(desc(-FC_Stroma)) %>%
+  slice(1:10)
+pvalue_df <- pvalue_df %>%
+  dplyr::mutate(
+    Label = ifelse(genes %in% c(a1$genes, a2$genes, a3$genes, a4$genes), 1, 0)
+  )
+
+
+# Plot
+g1 <- ggplot(pvalue_df, aes(FC_Cancer, FC_Stroma, fill=Significance)) +  # , order=Significance
+  geom_point(aes(size=Sig, shape = Sig), colour = "black") +
+  # geom_label_repel(data=pvalue_df[c(pvalue_df$p_adjusted_Cancer<0.001 | pvalue_df$p_adjusted_Stroma<0.001),],
+  geom_label_repel(data=pvalue_df[pvalue_df$Label==1,],
+                   # label.padding = 0.25,
+                   segment.size = 1,
+                   # nudge_x = 0.01,
+                   # nudge_y = 0.01,
+                   show.legend = FALSE,
+                   min.segment.length = 0, # draw all line segments
+                   # box.padding = 1,
+                   aes(label = genes, color = Significance),
+                   size = 3, fontface = "bold", segment.color = "black", fill = scales::alpha(c("white"), 0.85)) +
+  geom_abline(intercept = 0, slope = -1, size = 1, linetype = 2) +
+  scale_fill_brewer(palette = "Set1") +
+  ylim(-0.15, 0.15) +
+  xlim(-0.15, 0.15) +
+  scale_color_brewer(palette = "Set1") +
+  # scale_fill_manual(name="Significance"),
+  # values=c("#4daf4a", "#377eb8", "#e41a1c", "Black"),
+  # labels=c("With Normal p.adj<0.05", "Wo Normal p.adj<0.05", "W&Wo Normal p.adj<0.05", "p.adj>0.05")) +
+  scale_size_manual(values=c(0.5, 3)) +
+  scale_shape_manual(values=c(16, 21)) +
+  labs(x="LOG10 FC in gene expression (Cancer)", y="LOG10 FC in gene expression (Stroma)") +
+  guides(fill = guide_legend(title = "Sig", nrow=2, byrow=TRUE, override.aes = list(size = 5, shape = 21, fill = c("#e41a1c", "#377eb8", "#4daf4a", "Black"))),
+         color = FALSE, size = FALSE, shape = FALSE) +
+  theme_bw() +
+  theme(axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        axis.text.y = element_text(size = 10, face = "bold"),
+        axis.text.x = element_text(size = 10, face = "bold"),
+        legend.title = element_text(size = 13, face = "bold"),
+        legend.text = element_text(size = 10, face = "bold"),
+        legend.direction = 'horizontal',
+        # legend.box="vertical", 
+        legend.position = 'bottom',
+        legend.margin=margin(),
+        legend.key = element_rect(size = 5),
+        legend.key.size = unit(1.5, 'lines'))
+ggsave(plot = g1, filename = "Ly/Images/Gexp/Cancer_vs_Stroma_scatter.png", width = 6, height = 7, units = 'in', dpi = 300)
+
+
+
+
+
+##################################
+####### CANCER VS. NORMAL ########
+##################################
+
+
+# Read gexp results data
+pvalue_df_w_normal <- read_xlsx("Ly/Images/Gexp/Ly_Cancer_gexp.xlsx") %>%
+  dplyr::mutate(FC = log(median1/median2))
+colnames(pvalue_df_w_normal)[2:ncol(pvalue_df_w_normal)] <- paste0(colnames(pvalue_df_w_normal)[2:ncol(pvalue_df_w_normal)], "_Cancer")
+pvalue_df_wo_normal <- read_xlsx("Ly/Images/Gexp/Ly_Normal_gexp.xlsx") %>%
+  dplyr::mutate(FC = log(median1/median2))
+colnames(pvalue_df_wo_normal)[2:ncol(pvalue_df_wo_normal)] <- paste0(colnames(pvalue_df_wo_normal)[2:ncol(pvalue_df_wo_normal)], "_Normal")
+
+# Join
+pvalue_df <- full_join(pvalue_df_w_normal, pvalue_df_wo_normal)
+
+# Modify
+pvalue_df <- pvalue_df %>%
+  dplyr::mutate(
+    Significance = ifelse(pvalue_Cancer < 0.01 & pvalue_Normal < 0.01, "C&N P<0.01",
+                          ifelse(pvalue_Cancer < 0.01, "Cancer P<0.01",
+                                 ifelse(pvalue_Normal < 0.01, "Normal P<0.01", "P>0.01"))),
+    Significance = factor(Significance, levels = c("Cancer P<0.01", "Normal P<0.01", "C&N P<0.01", "P>0.01")),
+    Sig = ifelse(Significance == "P>0.01", 1, 21),
+    Sig = factor(Sig),
+    genes = gsub("N:GEXP:", "", genes)
+  )
+
+# Find 20 genes with lowest p value
+a1 <- pvalue_df %>% 
+  dplyr::filter(pvalue_Cancer < 0.01) %>%
+  arrange(desc(FC_Cancer)) %>%
+  slice(1:10)
+a2 <- pvalue_df %>% 
+  dplyr::filter(pvalue_Normal < 0.01) %>%
+  arrange(desc(FC_Normal)) %>%
+  slice(1:10)
+a3 <- pvalue_df %>% 
+  dplyr::filter(pvalue_Cancer < 0.01) %>%
+  arrange(desc(-FC_Cancer)) %>%
+  slice(1:10)
+a4 <- pvalue_df %>% 
+  dplyr::filter(pvalue_Normal < 0.01) %>%
+  arrange(desc(-FC_Normal)) %>%
+  slice(1:10)
+pvalue_df <- pvalue_df %>%
+  dplyr::mutate(
+    Label = ifelse(genes %in% c(a1$genes, a2$genes, a3$genes, a4$genes), 1, 0)
+  )
+
+
+# Plot
+g1 <- ggplot(pvalue_df, aes(FC_Cancer, FC_Normal, fill=Significance)) +  # , order=Significance
+  geom_point(aes(size=Sig, shape = Sig), colour = "black") +
+  # geom_label_repel(data=pvalue_df[c(pvalue_df$p_adjusted_Cancer<0.001 | pvalue_df$p_adjusted_Normal<0.001),],
+  geom_label_repel(data=pvalue_df[pvalue_df$Label==1,],
+                   # label.padding = 0.25,
+                   segment.size = 1,
+                   # nudge_x = 0.01,
+                   # nudge_y = 0.01,
+                   show.legend = FALSE,
+                   min.segment.length = 0, # draw all line segments
+                   # box.padding = 1,
+                   aes(label = genes, color = Significance),
+                   size = 5, fontface = "bold", segment.color = "black", fill = scales::alpha(c("white"), 0.85)) +
+  geom_abline(intercept = 0, slope = -1, size = 1, linetype = 2) +
+  scale_fill_brewer(palette = "Set1") +
+  ylim(-0.125, 0.1) +
+  xlim(-0.125, 0.1) +
+  scale_color_brewer(palette = "Set1") +
+  # scale_fill_manual(name="Significance"),
+  # values=c("#4daf4a", "#377eb8", "#e41a1c", "Black"),
+  # labels=c("With Normal p.adj<0.05", "Wo Normal p.adj<0.05", "W&Wo Normal p.adj<0.05", "p.adj>0.05")) +
+  scale_size_manual(values=c(0.6, 4)) +
+  scale_shape_manual(values=c(16, 21)) +
+  labs(x="LOG10 FC in gene expression (Cancer)", y="LOG10 FC in gene expression (Normal)") +
+  guides(fill = guide_legend(title = "Sig", nrow=2, byrow=TRUE, override.aes = list(size = 5, shape = 21, fill = c("#e41a1c", "#377eb8", "#4daf4a", "Black"))),
+         color = FALSE, size = FALSE, shape = FALSE) +
+  theme_bw() +
+  theme(axis.title.y = element_text(size = 15, face = "bold"),
+        axis.title.x = element_text(size = 15, face = "bold"),
+        axis.text.y = element_text(size = 15, face = "bold"),
+        axis.text.x = element_text(size = 15, face = "bold"),
+        legend.title = element_text(size = 15, face = "bold"),
+        legend.text = element_text(size = 15, face = "bold"),
+        legend.direction = 'horizontal',
+        # legend.box="vertical", 
+        legend.position = 'bottom',
+        legend.margin=margin(),
+        legend.key = element_rect(size = 5),
+        legend.key.size = unit(1, 'lines'))
+ggsave(plot = g1, filename = "Ly/Images/Gexp/Cancer_vs_Normal_scatter.png", width = 6, height = 7, units = 'in', dpi = 300)
 

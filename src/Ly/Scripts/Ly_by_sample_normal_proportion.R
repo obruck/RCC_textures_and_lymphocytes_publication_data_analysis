@@ -11,6 +11,7 @@ library(ggplot2)
 library(ComplexHeatmap)
 library(circlize)
 library(RColorBrewer)
+library(ggpubr)
 
 
 ############################# LOAD DATA ##########################################################################################################
@@ -38,11 +39,21 @@ textures <- c("Ly_Blood", "Ly_Cancer", "Ly_Stroma", "Ly_Other")
 
 # Proportions
 # Normalize in all textures (= values to equal 100%)
-tcga_kirc$Ly_Blood <- 100*tcga_kirc$Ly_Blood / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
-tcga_kirc$Ly_Cancer <- 100*tcga_kirc$Ly_Cancer / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
-tcga_kirc$Ly_Normal <- 100*tcga_kirc$Ly_Normal / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
-tcga_kirc$Ly_Stroma <- 100*tcga_kirc$Ly_Stroma / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
-tcga_kirc$Ly_Other <- 100*tcga_kirc$Ly_Other / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc$Ly_Blood1 <- 100*tcga_kirc$Ly_Blood / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc$Ly_Cancer1 <- 100*tcga_kirc$Ly_Cancer / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc$Ly_Normal1 <- 100*tcga_kirc$Ly_Normal / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc$Ly_Stroma1 <- 100*tcga_kirc$Ly_Stroma / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc$Ly_Other1 <- 100*tcga_kirc$Ly_Other / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+
+# Replace
+tcga_kirc <- tcga_kirc %>%
+  dplyr::select(-c(Ly_Other, Ly_Cancer, Ly_Normal, Ly_Stroma, Ly_Blood)) %>%
+  dplyr::rename(
+    Ly_Other = Ly_Other1,
+    Ly_Cancer = Ly_Cancer1,
+    Ly_Normal = Ly_Normal1,
+    Ly_Stroma = Ly_Stroma1,
+    Ly_Blood = Ly_Blood1)
 
 a <- 100/(tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
 tcga_kirc[textures] <- sapply(tcga_kirc[textures], function(x) x*a)
@@ -63,7 +74,7 @@ for (texture1 in textures) {
   g <- ggplot(tcga_kirc, aes_string(x = "Normal_Present", y = texture1)) +
     geom_jitter(size=5, width = 0.2, aes(fill=Normal_Present), shape = 21, color = "black") +
     geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
-    labs(y=paste0(str_to_sentence(gsub("_", " in ", texture1)), " texture (%)"), x="Normal tissue in sample") +
+    labs(y=paste0(str_to_sentence(gsub("Ly", "Lymphocytes", gsub("_", " in ", texture1))), " texture (%)"), x="Normal tissue in sample") +
     theme_bw() +
     theme(axis.text.x = element_text(size=12, colour = "black"),
           axis.text.y = element_text(size=12, colour = "black"),

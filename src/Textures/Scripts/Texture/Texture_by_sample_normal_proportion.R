@@ -29,10 +29,27 @@ tcga_kirc$`texture_normal_%` <- 100*tcga_kirc$texture_normal / (tcga_kirc$textur
 tcga_kirc$`texture_stroma_%` <- 100*tcga_kirc$texture_stroma / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 tcga_kirc$`texture_other_%` <- 100*tcga_kirc$texture_other / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 
+# Rename
+colnames(tcga_kirc)[grep(pattern = "^inf_bin_lymphocytes_[[:print:]]*", colnames(tcga_kirc))] <- c("Ly_Blood", "Ly_Cancer", "Ly_Normal", "Ly_Stroma", "Ly_Other")
+textures <- c("Ly_Blood", "Ly_Cancer", "Ly_Stroma", "Ly_Other")
+
+# Proportions
+# Normalize in all textures (= values to equal 100%)
+tcga_kirc$Ly_Blood <- 100*tcga_kirc$Ly_Blood / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc$Ly_Cancer <- 100*tcga_kirc$Ly_Cancer / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc$Ly_Normal <- 100*tcga_kirc$Ly_Normal / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc$Ly_Stroma <- 100*tcga_kirc$Ly_Stroma / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc$Ly_Other <- 100*tcga_kirc$Ly_Other / (tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+
+a <- 100/(tcga_kirc$Ly_Blood + tcga_kirc$Ly_Cancer + tcga_kirc$Ly_Normal + tcga_kirc$Ly_Stroma + tcga_kirc$Ly_Other)
+tcga_kirc[textures] <- sapply(tcga_kirc[textures], function(x) x*a)
+ 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
-
+tcga_kirc1 <- read_xlsx("../data/TCGA_source_sites.xlsx")
+tcga_kirc <- tcga_kirc %>% dplyr::left_join(tcga_kirc1)
+a <- tcga_kirc %>% group_by(ClinicalCenter) %>% summarise(me = median(Ly_Cancer))
 
 
 ############################# PLOT ##########################################################################################################
@@ -42,11 +59,12 @@ tcga_kirc <- tcga_kirc %>%
 colnames(tcga_kirc)[grep(pattern = "^texture_[[:print:]]*%", colnames(tcga_kirc))] <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
 textures <- c("Blood", "Cancer", "Stroma", "Other")
 
-# Melt longer
+# Divide by normal tissue proportion
 tcga_kirc <- tcga_kirc %>%
   dplyr::mutate(
     Normal_Present = ifelse(Normal < "1", "No", "Yes")
   )
+
 
 # Plot
 for (texture1 in textures) {

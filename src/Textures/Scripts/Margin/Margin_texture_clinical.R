@@ -38,6 +38,7 @@ tcga_kirc$`non_margin_texture_other_%` <- 100*tcga_kirc$non_margin_texture_other
 
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
+  dplyr::filter(`texture_normal_%` > 1) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 # Save
@@ -106,11 +107,13 @@ tcga_kirc$Tumor_size <- substr(tcga_kirc$Tumor_size, 1, 2)
 cols1 = grep(pattern = "CLIN:pathologic_N", colnames(tcga_kirc))
 mc = max.col(tcga_kirc[cols1], ties.method = "first")
 tcga_kirc$Lymph_node_metastasis <- gsub("B:CLIN:pathologic_N_", "", colnames(tcga_kirc[cols1])[mc])
+tcga_kirc$Lymph_node_metastasis <- ifelse(tcga_kirc$Lymph_node_metastasis == "NX", NA, tcga_kirc$Lymph_node_metastasis)
 
 ## CLIN:pathologic_M
 cols1 = grep(pattern = "CLIN:pathologic_M", colnames(tcga_kirc))
 mc = max.col(tcga_kirc[cols1], ties.method = "first")
 tcga_kirc$Organ_metastasis <- gsub("B:CLIN:pathologic_M_", "", colnames(tcga_kirc[cols1])[mc])
+tcga_kirc$Organ_metastasis <- ifelse(tcga_kirc$Organ_metastasis == "MX", NA, tcga_kirc$Organ_metastasis)
 
 ## CLIN:clinical_M
 cols1 = grep(pattern = "CLIN:clinical_M", colnames(tcga_kirc))
@@ -159,7 +162,8 @@ cols1 = grep(pattern = "CLIN:primary_therapy_outcome_success", colnames(tcga_kir
 mc = max.col(tcga_kirc[cols1], ties.method = "first")
 tcga_kirc$therapy_outcome <- gsub("B:CLIN:primary_therapy_outcome_success_", "", colnames(tcga_kirc[cols1])[mc])
 tcga_kirc$therapy_outcome <- ifelse(tcga_kirc$therapy_outcome == "[Unknown]", NA, tcga_kirc$therapy_outcome)
-tcga_kirc <- tcga_kirc %>% mutate(therapy_outcome = factor(therapy_outcome, levels = c("Complete Remission/Response", "Stable Disease", "Progressive Disease", NA)))
+tcga_kirc$therapy_outcome <- ifelse(tcga_kirc$therapy_outcome == "Stable Disease", NA, tcga_kirc$therapy_outcome)
+tcga_kirc <- tcga_kirc %>% mutate(therapy_outcome = factor(therapy_outcome, levels = c("Complete Remission/Response", "Progressive Disease", NA)))
 
 ## CLIN:eastern_cancer_oncology_group
 cols1 = grep(pattern = "CLIN:eastern_cancer_oncology_group", colnames(tcga_kirc))
@@ -225,21 +229,35 @@ tcga_kirc <- tcga_kirc %>% mutate(PLT = factor(PLT, levels = c("Low", "Normal", 
 # Summary
 sapply(tcga_kirc[, c(which( colnames(tcga_kirc)=="Tumor_size" ) : which( colnames(tcga_kirc)=="PLT" ) )], function(x) length(unique(x)))
 sapply(tcga_kirc[, c(which( colnames(tcga_kirc)=="Tumor_size" ) : which( colnames(tcga_kirc)=="PLT" ) )], function(x) unique(x))
-twos = c("gender", "vital_status", "LDH", "ECOG", "Karnofsky", "Age", colnames(df2)[2:ncol(df2)])
-threes = c("Lymph_node_metastasis", "Organ_metastasis", "Organ_metastasis_", "WBC", "therapy_outcome", "smoking_status", "HB", "calcium", "PLT")
-fours = c("Tumor_size", "race", "stage", "grade")
-
+twos = c("gender", "LDH", "ECOG", "Karnofsky", "Age", "Lymph_node_metastasis", "Organ_metastasis",
+         "Age_High", "gender_MALE", "therapy_outcome_Progressive Disease", "ECOG_1", "Lymph_node_metastasis_N1", "Organ_metastasis_M1", "Karnofsky_>80",
+         colnames(df2)[2:ncol(df2)])
+threes = c("WBC", "smoking_status", "HB", "calcium", "PLT")  # "Organ_metastasis_"
+fours = c("Tumor_size", "stage", "grade") #"race"
 
 # Convert variables to binary format
 ## Variables to hotencode
-to_hotencode <- tcga_kirc[c(twos, threes, fours)]
+to_hotencode <- tcga_kirc[c("gender", "LDH", "ECOG", "Karnofsky", "Age", "Lymph_node_metastasis", "Organ_metastasis", "therapy_outcome", threes, fours)]
 ### k-cluster make one hot encoder
 to_hotencode_var <- dummy_cols(tcga_kirc[colnames(to_hotencode)]) %>%
   dplyr::select(-ends_with("_NA"))
+# to_hotencode_var <- to_hotencode_var %>% dplyr::select(-(1:ncol(to_hotencode)))
+### Replace NA with 0
+# for(i in 1:ncol(to_hotencode_var)){
+#   to_hotencode_var[is.na(to_hotencode_var[,i]), i] = 0
+# }
 ### Remove duplicate binary variables
-to_hotencode_var <- to_hotencode_var %>% dplyr::select(-c(Age_Low, gender_FEMALE, vital_status_Alive, LDH_Normal, ECOG_0, `Karnofsky_≤80`))
+to_hotencode_var <- to_hotencode_var %>% dplyr::select(-c(Age_Low, gender_FEMALE, `therapy_outcome_Progressive Disease`, Lymph_node_metastasis_N0, Organ_metastasis_M0, LDH_Normal, ECOG_0, `Karnofsky_≤80`))
+to_hotencode_var <- to_hotencode_var %>% dplyr::select(-one_of(colnames(tcga_kirc)))
+to_hotencode_var <- cbind(tcga_kirc %>% dplyr::select(tcga_id), to_hotencode_var)
 ### Join
-to_hotencode_var <- cbind(tcga_kirc %>% dplyr::select(tcga_id) %>% dplyr::rename(ID = tcga_id), to_hotencode_var)
+b <- ncol(tcga_kirc)
+# to_hotencode_var <- cbind(tcga_kirc %>% dplyr::select(tcga_id) %>% dplyr::rename(ID = tcga_id), to_hotencode_var)
+tcga_kirc <- dplyr::left_join(tcga_kirc, to_hotencode_var)
+
+# Rename
+colnames(tcga_kirc)[grep(pattern = "^texture_[[:print:]]*%", colnames(tcga_kirc))] <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
+textures <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
 
 
 ############################# PLOT ##########################################################################################################
@@ -248,7 +266,7 @@ to_hotencode_var <- cbind(tcga_kirc %>% dplyr::select(tcga_id) %>% dplyr::rename
 # Melt longer
 tcga_kirc_long <- tcga_kirc %>%
   dplyr::select("tcga_id", "Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other", "NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other") %>%
-  dplyr::rename("ID" = "tcga_id") %>%
+  # dplyr::rename("ID" = "tcga_id") %>%
   reshape2::melt() %>%
   arrange(desc(value)) %>%
   dplyr::mutate(Margin = gsub("_[[:print:]]*", "", variable),
@@ -278,13 +296,15 @@ tcga_kirc_nonmargin <- tcga_kirc_long %>%
 tcga_kirc_wide <- tcga_kirc_margin %>%
   full_join(tcga_kirc_nonmargin) %>%
   mutate(FC = Margin/NonMargin,
-         FC = ifelse(FC == "Inf", 10,
+         FC = ifelse(FC == "Inf", (Margin+1)/(NonMargin+1),
                      ifelse(FC > 10, 10,
                             ifelse(FC < 0.1, 0.1, FC))))
 
 ## Join
-tcga_kirc <- tcga_kirc_wide %>% inner_join(to_hotencode_var)
-tcga_kirc <- tcga_kirc %>% dplyr::left_join(tcga_kirc0 %>% dplyr::select(ID = tcga_id, `texture_normal_%`))
+tcga_kirc <- tcga_kirc_wide %>%
+  inner_join(tcga_kirc)
+tcga_kirc <- tcga_kirc %>%
+  dplyr::left_join(tcga_kirc0 %>% dplyr::select(tcga_id, `texture_normal_%`))
 
 
 
@@ -293,9 +313,9 @@ tcga_kirc <- tcga_kirc %>%
   dplyr::relocate("neoantigen_num", .after = "TGF-beta_Response") %>%
   dplyr::relocate("indel_num", "immunogenic_indel_num", "numberOfImmunogenicMutation", "Genome_doublings", .after = "Indel_Neoantigens") %>%
   dplyr::rename(Neoantigens = neoantigen_num,
-                ImmunogenicMutations = numberOfImmunogenicMutation,
+                Immunogenic_Mutations = numberOfImmunogenicMutation,
                 Indels = indel_num,
-                Immunogenic_indels = immunogenic_indel_num
+                Immunogenic_Indels = immunogenic_indel_num
   )
 
 
@@ -330,15 +350,17 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
   ## Remove character variables
   nums <- unlist(lapply(tcga_kirc[unique_values_2], is.numeric))
   unique_values_2 <- unique_values_2[nums]
+  
   ## Remove uninteresting variables
   unique_values_2 <- unique_values_2[-which(unique_values_2 %in% c("Wound_Healing", "Lymphocyte_Infiltration_Signature_Score", "Macrophage_Regulation", "Lymphocytes", "Number_of_Segments", "Fraction_Altered",
                                                                    "BCR_Evenness", "BCR_Shannon", "TCR_Evenness", "TCR_Shannon", "CTA_Score", "Aneuploidy_Score",
+                                                                   "SNV_Neoantigens", "Indel_Neoantigens", "Immunogenic_Indels", "Immunogenic_Mutations", "Silent_Mutation_Rate","Nonsilent_Mutation_Rate","Homologous_Recombination_Defects",
                                                                    "OS_Time", "PFI_Time", "Macrophages_M0", "Mast_Cells", "Mast_Cells_Activated", "Mast_Cells_Resting",
                                                                    "T_Cells_Follicular_Helper", "T_Cells_CD4_Memory_Resting", "B_Cells_Naive",
-                                                                   "Dendritic_Cells_Resting", "Dendritic_Cells_Activated", "Neutrophils_1", "Eosinophils_1",
-                                                                   "HBV", "HCV", "HHV", "HIV", "HPV", "HTLV", "MCV",
+                                                                   "NK_Cells_Resting", "Dendritic_Cells_Resting", "Dendritic_Cells_Activated", "Neutrophils_1", "Eosinophils_1",
+                                                                   "CMV", "EBV", "HBV", "HCV", "HHV", "HIV", "HPV", "HTLV", "MCV",
                                                                    "therapy_outcome_Complete Remission/Response", "therapy_outcome_Stable Disease", "therapy_outcome_Progressive Disease",
-                                                                   "purity", "ploidy","Coverage_for_80_power",
+                                                                   "purity", "ploidy","Coverage_for_80_power", "Genome_doublings",
                                                                    "Cancer_DNA_fraction", "Subclonal_genome_fraction", "numberOfNonSynonymousSNP",
                                                                    "numberOfPeptideTested", "numberOfBindingPMHC", "numberOfBindingExpressedPMHC",
                                                                    "saimiriine_herpesvirus", "AS", "ASprime", "LOH_n_seg", "LOH_frac_altered", "Nrf2_Score"))]
@@ -379,7 +401,9 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
     dplyr::mutate(genes = gsub("_[[:print:]]*", "", genes)) %>%
     dplyr::distinct()
   # tmp <- data.frame(twos); tmp <- rbind(tmp, data.frame(threes) %>% rename(twos = threes)); tmp <- rbind(tmp, data.frame(fours) %>% rename(twos = fours))
+  
   tmp = data.frame(twos = unique_values_2)
+  
   for (i in vars$genes) {
     a <- tmp %>% dplyr::filter(str_detect(twos, i))
     ## Join
@@ -390,6 +414,8 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
     }
   }
   a <- b; rm(b)
+  ## Remove NA
+  a <- a %>% dplyr::filter(!is.na(twos))
   b <- as.character(a$twos)
   
   
@@ -525,8 +551,10 @@ df2 <- df1 %>%
 colnames(df2) <- gsub("N:SAMP:", "", colnames(df2))
 ## Join
 tcga_kirc1 <- tcga_kirc0 %>%
-  dplyr::select(ID, Margin, NonMargin, Texture, FC, vital_status_Dead, `texture_normal_%`) %>%
-  dplyr::left_join(df2 %>% dplyr::select(ID = tcga_id, OS_Time))
+  dplyr::select(tcga_id, Margin, NonMargin, Texture, FC, vital_status, `texture_normal_%`) %>%
+  dplyr::left_join(df2 %>% dplyr::select(tcga_id, OS_Time)) %>%
+  dplyr::rename(vital_status_Dead = vital_status) %>%
+  dplyr::mutate(vital_status_Dead = ifelse(vital_status_Dead == "Dead", 1, 0))
 
 
 # Loop
@@ -619,8 +647,8 @@ for (texture1 in c("Blood", "Stroma", "Normal", "Other")) {
 
 
 # Find variables with 2 values excluding NA
-unique_values_0 = unique_values_2[40:85]
-unique_values_1 = unique_values_2[1:39]
+unique_values_0 = unique_values_2[29:62]
+unique_values_1 = unique_values_2[1:28]
 
 
 # Function to capiralize first letter
@@ -651,7 +679,10 @@ for (unique_value_name in 1:length(list(unique_values_0, unique_values_1))) {
     # Rename
     dplyr::mutate(genes = gsub("herpes", "Herpes", genes),
                   genes = gsub("stage_", "", genes),
-                  genes = gsub("_", " ", genes))
+                  genes = gsub("_", " ", genes),
+                  genes = gsub("gamma", "Gamma", genes),
+                  genes = gsub("delta", "Delta", genes),
+                  genes = gsub("Genome d", "Genome D", genes))
   
   
   # Calculate FC and -log10 P value
@@ -675,6 +706,7 @@ for (unique_value_name in 1:length(list(unique_values_0, unique_values_1))) {
       Variables = firstup(Variables)
     )
   
+  
   # Balloonplot
   p <- ggballoonplot(pvalue_df1, x = "Texture", y = "Variables",
                      fill = "FC_log",
@@ -686,16 +718,15 @@ for (unique_value_name in 1:length(list(unique_values_0, unique_values_1))) {
     # scale_size(breaks = c(exp(0.05), 2, 3), labels = c(0.05,0.01,0.001), range = c(1, 10), limits = c(exp(0.05), max(-log10(0.001), max(pvalue_df1$neg_log10_p_adj, na.rm = TRUE)))) +
     scale_size(breaks = c(exp(0.05), 2, 3), labels = c(0.05,0.01,0.001), range = c(1, 10), limits = c(exp(0.05), max(-log10(0.001), max(pvalue_df1$neg_log10_p, na.rm = TRUE)))) +
     # scale_size(breaks = c(0, 1, 2, 3), range = c(1, 10), limits = c(1, max(pvalue_df1$neg_log10_p_adj, na.rm = TRUE))) +
-    # ceiling(max(pvalue_df1$neg_log10_p))
     # scale_fill_viridis_c(option = "C") +
     scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
     # gradient_fill(c("blue", "white", "red")) +
     guides(size = guide_legend(title="P-value", nrow = 3, title.vjust = 0.5),
            fill = guide_colorbar(title="LOG10(FC)", title.vjust = 0.75)) +
     font("xy.text", size = 10, color = "black", face="plain") +
-    theme(axis.title.y = element_text(size=12, colour="black", face="bold", angle = 90),
+    theme(axis.title.y = element_blank(),
+          axis.title.x = element_blank(),
           axis.text.x = element_text(colour="black", face="bold", angle = 45, hjust = 1.0, vjust = 1.0),
-          axis.title.x = element_text(size=12, colour="black", face="bold"),
           axis.text.y = element_text(colour="black"),
           legend.position = "right",
           # legend.position = c(1.3, 1.3),
@@ -707,7 +738,7 @@ for (unique_value_name in 1:length(list(unique_values_0, unique_values_1))) {
           legend.title = element_text(size=12, colour="black", face="bold"))
   p
   
-  ggsave(plot = p, filename = paste0("Textures/Images/Margin/Margin_balloonplot/Balloonplot_Texture_", unique_value_name, ".png"), width = 5, height = nrow(pvalue_df1)/25, units = 'in', dpi = 300)
+  ggsave(plot = p, filename = paste0("Textures/Images/Margin/Margin_balloonplot/Balloonplot_Texture_", unique_value_name, ".png"), width = 5, height = nrow(pvalue_df1)/16, units = 'in', dpi = 300)
   
 }
 

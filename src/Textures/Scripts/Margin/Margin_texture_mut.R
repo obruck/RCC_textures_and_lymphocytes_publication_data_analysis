@@ -6,11 +6,11 @@ print("Start Textures/Scripts/Margin/Margin_texture_mut.R")
 library(readxl)
 library(tidyverse)
 library(data.table)
+library(ggrepel)
 library(ggplot2)
 library(ggpubr)
 library(rstatix)
 library(RColorBrewer)
-
 
 
 ############################# LOAD DATA ##########################################################################################################
@@ -37,6 +37,7 @@ tcga_kirc$`non_margin_texture_other_%` <- 100*tcga_kirc$non_margin_texture_other
 # Filter
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
+  dplyr::filter(`texture_normal_%` > 1) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
 
 # Save data
@@ -76,8 +77,7 @@ pairwise.test = tcga_kirc_long %>%
 
 
 # Plot
-png("Textures/Images/Margin/TCGA_margin_Texture_scatterplot.png", width = 6, height = 6, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
-ggplot(tcga_kirc_long, aes(x = Margin, y = value, group = variable)) +
+g <- ggplot(tcga_kirc_long, aes(x = Margin, y = value, group = variable)) +
   geom_point(size=5, aes(fill=Margin), shape = 21, color = "black", position=position_jitterdodge()) +
   geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
   labs(y="Proportion (%)", x="Textures") +
@@ -96,7 +96,8 @@ ggplot(tcga_kirc_long, aes(x = Margin, y = value, group = variable)) +
     size = 5,
     y.position = 90
   )
-dev.off()
+ggsave(plot = g, filename = "Textures/Images/Margin/TCGA_margin_Texture_scatterplot.png", width = 6, height = 6, units = 'in', dpi = 300)
+
 
 
 
@@ -121,7 +122,7 @@ tcga_kirc_nonmargin <- tcga_kirc_long %>%
 tcga_kirc_wide <- tcga_kirc_margin %>%
   full_join(tcga_kirc_nonmargin) %>%
   mutate(FC = Margin/NonMargin,
-         FC = ifelse(FC == "Inf", 10,
+         FC = ifelse(FC == "Inf", (Margin+1)/(NonMargin+1),
                      ifelse(FC > 10, 10,
                             ifelse(FC < 0.1, 0.1, FC))))
 
@@ -170,6 +171,7 @@ tcga_kirc <- tcga_kirc %>% dplyr::left_join(tcga_kirc0 %>% dplyr::select(ID = tc
 tcga_kirc0 <- tcga_kirc
 
 for (texture1 in unique(tcga_kirc0$Texture) ) {
+  # texture1 = unique(tcga_kirc0$Texture)[3]
   print(texture1)
   
   # Reset data
@@ -198,6 +200,11 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
   ## Add also the t values, 95%CI to the same dataframe
   pvalue_df$median1 <- unlist(lapply(tcga_kirc[c(str_detect(colnames(tcga_kirc), "_mutation") | colnames(tcga_kirc)=="mutations_total" | colnames(tcga_kirc)=="ploidy")], function(x) median(tcga_kirc[x %in% c("High", "MUT"),]$FC, na.rm=TRUE)))
   pvalue_df$median2 <- unlist(lapply(tcga_kirc[c(str_detect(colnames(tcga_kirc), "_mutation") | colnames(tcga_kirc)=="mutations_total" | colnames(tcga_kirc)=="ploidy")], function(x) median(tcga_kirc[x %in% c("Low", "WT"),]$FC, na.rm=TRUE)))
+  ## Extract frequencies
+  pvalue_df1 <- unlist(lapply(tcga_kirc[c(str_detect(colnames(tcga_kirc), "_mutation") | colnames(tcga_kirc)=="mutations_total" | colnames(tcga_kirc)=="ploidy")], function(x) table(x %in% c("High", "MUT"))))
+  pvalue_df$freq_TRUE <- pvalue_df1[grep(pattern = "TRUE", x = names(pvalue_df1))]
+  pvalue_df$freq_FALSE <- pvalue_df1[grep(pattern = "FALSE", x = names(pvalue_df1))]
+  pvalue_df$prop = pvalue_df$freq_TRUE / (pvalue_df$freq_TRUE + pvalue_df$freq_FALSE)
   ## Rownames to column
   pvalue_df <- pvalue_df %>%
     rownames_to_column() %>%
@@ -269,3 +276,58 @@ for (texture1 in unique(tcga_kirc0$Texture) ) {
   }
   
 }
+
+
+
+################################ Prepare linear scatter plots for mutations ################################################################
+
+
+# Load data
+rm(pvalue_df, pvalue_df1)
+for (texture1 in gsub("Margin_", "", margin)) {
+  pvalue_df1 <- readxl::read_xlsx(paste0("Textures/Images/Margin/Margin_vs_non_margin/Texture/Mut/Ly_in_margin_vs_nonmargin_", texture1, "_mut.xlsx")) %>%
+    mutate(Pvalue = ifelse(pvalue < 0.05, "p<0.05",
+                        ifelse(pvalue < 0.10, "p<0.10", NA)),
+           Texture = texture1) %>%
+    dplyr::filter(!is.na(Pvalue))
+  if (exists("pvalue_df")) {
+    pvalue_df <- rbind(pvalue_df, pvalue_df1)
+  } else {
+    pvalue_df <- pvalue_df1
+  }
+}
+
+# Modify data
+pvalue_df <- pvalue_df %>%
+  dplyr::mutate(
+    genes = gsub("_mutation", "", genes),
+    genes = toupper(genes),
+    prop = prop * 100
+  )
+
+
+g <- ggplot(pvalue_df, aes(x = median1, y = median2)) +
+  geom_point(aes(shape = Pvalue, fill = Texture, size = prop), color = "black") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(x="Median margin:nonmargin texture ratio in mutated samples", y="Median margin:nonmargin texture ratio in wild-type samples") +
+  theme_bw() +
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 3)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 3)) +
+  theme(axis.text.x = element_text(size=12, colour = "black"),
+        axis.text.y = element_text(size=12, colour = "black"),
+        axis.title.y = element_text(size=11, face="bold", colour = "black"),
+        axis.title.x = element_text(size=11, face="bold", colour = "black"),
+        legend.position = "bottom",
+        legend.box = "vertical",
+        legend.key.size = unit(0.01, "cm"),
+        legend.margin = margin(),
+        legend.spacing.y = unit(0.1, "cm")) +
+  scale_fill_manual(values = c("#e41a1c", "#4daf4a", "#984ea3", "#ff7f00")) +
+  scale_shape_manual(values = c(21, 24)) +
+  scale_size(breaks = c(10, 30, 50), range = c(1, 10)) +
+  guides(fill = guide_legend(override.aes=list(shape=21)),
+         size = guide_legend("Proportion (%)")) +
+  geom_label_repel(segment.size = 1,
+                   aes(label=genes), size = 4, fontface = "bold")
+g
+ggsave(plot = g, filename = "Textures/Images/Margin/Margin_vs_non_margin/Texture/Mut/Ly_in_margin_vs_nonmargin_mut_only_significant.png", width = 5.0, height = 5.5, units = 'in', dpi = 300)

@@ -12,7 +12,6 @@ library(rstatix)
 library(RColorBrewer)
 
 
-
 ############################# LOAD DATA ##########################################################################################################
 
 
@@ -28,9 +27,47 @@ tcga_kirc$`margin_texture_stroma_%` <- 100*tcga_kirc$margin_texture_stroma / (tc
 tcga_kirc$`margin_texture_other_%` <- 100*tcga_kirc$margin_texture_other / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 
 
+# Filter samples with >5% cancer normal tissue
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
+
+# Keep only centers with >20 samples
+n <- tcga_kirc %>%
+  group_by(tissue_source_site) %>%
+  summarise(n=n()) %>%
+  dplyr::filter(n>=20) %>%
+  dplyr::filter(!tissue_source_site %in% c("AK")) 
+
+tcga_kirc <- tcga_kirc %>%
+  dplyr::filter(tissue_source_site %in% n$tissue_source_site)
+
+# Filter centers with too much/little lymphocytes than expected
+# 3Z	Mary Bird Perkins Cancer Center - Our Lady of the Lake
+# 6D	University of Oklahoma HSC
+# A3	International Genomics Consortium
+# AK	Fox Chase
+# AS	St. Joseph's Medical Center-(MD)
+# B0	University of Pittsburgh
+# B2	Christiana Healthcare
+# B4	Cureline
+# B8	UNC
+# BP	MSKCC
+# CB	ILSBio
+# CJ	MD Anderson Cancer Center
+# CW	Mayo Clinic - Rochester
+# CZ	Harvard
+# DV	NCI Urologic Oncology Branch
+# EU	CHI-Penrose Colorado
+# G6	Roswell Park
+# GK	ABS - IUPUI
+# MM	BLN - Baylor
+# MW	University of Miami
+# T7	Molecular Response
+# V8	Medical College of Georgia
+# WM	University of Kansas
+
+# Save
 tcga_kirc0 <- tcga_kirc
 
 
@@ -118,7 +155,7 @@ tcga_kirc_nonmargin <- tcga_kirc_long %>%
 tcga_kirc_wide <- tcga_kirc_margin %>%
   full_join(tcga_kirc_nonmargin) %>%
   mutate(FC = Margin/NonMargin,
-         FC = ifelse(FC == "Inf", 10,
+         FC = ifelse(FC == "Inf", (Margin+1)/(NonMargin+1),
                      ifelse(FC > 10, 10,
                             ifelse(FC < 0.1, 0.1, FC))))
 
@@ -200,6 +237,11 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
   ## Add also the t values, 95%CI to the same dataframe
   pvalue_df$median1 <- unlist(lapply(tcga_kirc[c(str_detect(colnames(tcga_kirc), "_mutation") | colnames(tcga_kirc)=="mutations_total" | colnames(tcga_kirc)=="ploidy")], function(x) median(tcga_kirc[x %in% c("High", "MUT"),]$FC, na.rm=TRUE)))
   pvalue_df$median2 <- unlist(lapply(tcga_kirc[c(str_detect(colnames(tcga_kirc), "_mutation") | colnames(tcga_kirc)=="mutations_total" | colnames(tcga_kirc)=="ploidy")], function(x) median(tcga_kirc[x %in% c("Low", "WT"),]$FC, na.rm=TRUE)))
+  ## Extract frequencies
+  pvalue_df1 <- unlist(lapply(tcga_kirc[c(str_detect(colnames(tcga_kirc), "_mutation") | colnames(tcga_kirc)=="mutations_total" | colnames(tcga_kirc)=="ploidy")], function(x) table(x %in% c("High", "MUT"))))
+  pvalue_df$freq_TRUE <- pvalue_df1[grep(pattern = "TRUE", x = names(pvalue_df1))]
+  pvalue_df$freq_FALSE <- pvalue_df1[grep(pattern = "FALSE", x = names(pvalue_df1))]
+  pvalue_df$prop = pvalue_df$freq_TRUE / (pvalue_df$freq_TRUE + pvalue_df$freq_FALSE)
   ## Rownames to column
   pvalue_df <- pvalue_df %>%
     rownames_to_column() %>%
@@ -217,24 +259,24 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
   
   # Plot parameters
   a <- max(tcga_kirc$FC, na.rm=TRUE)
-  
-  
+
+
   for (two1 in pvalue_df$genes) {
-    
-    
+
+
     # Reset data
     tcga_kirc1 <- tcga_kirc
-    
+
     # Assign value
     # two1 = pvalue_df$genes[1]
     tcga_kirc1$two1 <- tcga_kirc1[[two1]]
-    
+
     # Filter NAs
     tcga_kirc1 <- tcga_kirc1 %>%
       dplyr::filter(!is.na(two1)) %>%
       dplyr::mutate(two1 = as.factor(two1))
-    
-    
+
+
     # Adjust p values
     pairwise.test = tcga_kirc1 %>%
       wilcox_test(FC~two1) %>%
@@ -243,12 +285,12 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
       mutate(p = ifelse(p < 0.001, "***",
                         ifelse(p < 0.01, "**",
                                ifelse(p < 0.05, "*", round(p, 2)))))
-    
-    
+
+
     # Plot
     g <- ggplot(tcga_kirc1, aes(x = two1, y = FC)) +
       geom_jitter(size=5, width = 0.2, aes(fill=two1), shape = 21, color = "black") +
-      geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+      geom_boxplot(outlier.shape = NA, alpha = 0.5) +
       labs(y=paste0("Lymphocyte proportion fold change (", texture1, " margin vs. non-margin)"), x=toupper(gsub("_mutation", "", two1))) +
       theme_bw() +
       theme(axis.text.x = element_text(size=12, colour = "black"),
@@ -267,7 +309,62 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
       )
     g
     ggsave(plot = g, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Mut/Ly_in_margin_vs_nonmargin_", two1, "_", texture1, "_mut.png"), width = 5, height = 5, units = 'in', dpi = 300)
-    
+
   }
   
 }
+
+
+################################ Prepare linear scatter plots for mutations ################################################################
+
+
+# Load data
+rm(pvalue_df, pvalue_df1)
+for (texture1 in gsub("Margin_", "", margin)) {
+  pvalue_df1 <- readxl::read_xlsx(paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Mut/Ly_in_margin_vs_nonmargin_", texture1, "_mut.xlsx")) %>%
+    mutate(Pvalue = ifelse(pvalue < 0.05, "p<0.05",
+                           ifelse(pvalue < 0.10, "p<0.10", NA)),
+           Texture = texture1) %>%
+    dplyr::filter(!is.na(Pvalue))
+  if (exists("pvalue_df")) {
+    pvalue_df <- rbind(pvalue_df, pvalue_df1)
+  } else {
+    pvalue_df <- pvalue_df1
+  }
+}
+
+# Modify data
+pvalue_df <- pvalue_df %>%
+  dplyr::mutate(
+    genes = gsub("_mutation", "", genes),
+    genes = gsub("_", "", genes),
+    genes = toupper(genes),
+    prop = prop * 100
+  )
+
+
+g <- ggplot(pvalue_df, aes(x = median1, y = median2)) +
+  geom_point(aes(shape = Pvalue, fill = Texture, size = prop), color = "black") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(x="Median margin:nonmargin lymphocyte ratio in mutated samples", y="Median margin:nonmargin lymphocyte ratio in wild-type samples") +
+  theme_bw() +
+  scale_x_continuous(expand = c(0, 0), limits = c(1, 3.3)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(1, 3.3)) +
+  theme(axis.text.x = element_text(size=12, colour = "black"),
+        axis.text.y = element_text(size=12, colour = "black"),
+        axis.title.y = element_text(size=10.5, face="bold", colour = "black"),
+        axis.title.x = element_text(size=10.5, face="bold", colour = "black"),
+        legend.position = "bottom",
+        legend.box = "vertical",
+        legend.key.size = unit(0.01, "cm"),
+        legend.margin = margin(),
+        legend.spacing.y = unit(0.1, "cm")) +
+  scale_fill_manual(values = c("#e41a1c", "#4daf4a", "#984ea3", "#ff7f00")) +
+  scale_shape_manual(values = c(21, 24)) +
+  scale_size(breaks = c(10, 30, 50), range = c(1, 10)) +
+  guides(fill = guide_legend(override.aes=list(shape=21)),
+         size = guide_legend("Proportion (%)")) +
+  geom_label_repel(segment.size = 1,
+                   aes(label=genes), size = 4, fontface = "bold")
+g
+ggsave(plot = g, filename = "Textures/Images/Margin/Margin_vs_non_margin/Ly/Mut/Ly_in_margin_vs_nonmargin_mut_only_significant.png", width = 5.0, height = 5.5, units = 'in', dpi = 300)

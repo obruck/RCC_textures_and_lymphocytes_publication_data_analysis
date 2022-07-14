@@ -28,7 +28,8 @@ setwd(getCurrentFileLocation())
 
 # Load data
 ## Images with correct resolution
-tcga_kirc <- read_xlsx("../data/raw_data.xlsx")
+tcga_kirc <- read_xlsx("../data/raw_data.xlsx") %>%
+  dplyr::select(-contains("_empty"))
 
 
 ## Mutation data
@@ -41,13 +42,17 @@ tcga_kirc1 <- read_xlsx("../data/mutations_before_sample_exclusion.xlsx") %>%
 ## Patients to remove (≤5% cancer, wrong histology and poor quality)
 to_remove <- read_xlsx("../data/samples_to_exclude.xlsx")
 
-
 # Filter
 ## Raw data + MMC2 + to_remove
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(!tcga_id %in% to_remove$TCGAid)
 tcga_kirc_mut <- tcga_kirc %>%
   dplyr::inner_join(tcga_kirc1)
+
+
+# Remove rows with `Mutations Total` "n/a" = no seq data (NB! Not NA)
+tcga_kirc_mut <- tcga_kirc_mut %>%
+  dplyr::filter(!`Mutations Total` == "n/a")
 
 
 # Save

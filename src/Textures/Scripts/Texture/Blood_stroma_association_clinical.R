@@ -41,7 +41,7 @@ tcga_kirc <- tcga_kirc %>%
 
 # Petri's data
 df <- readRDS("../data/clinical_transcriptome.rds") %>%
-# Filter patients
+  # Filter patients
   dplyr::select(one_of(tcga_kirc$tcga_id))
 
 # Clean clinical data
@@ -92,11 +92,13 @@ tcga_kirc$Tumor_size <- substr(tcga_kirc$Tumor_size, 1, 2)
 cols1 = grep(pattern = "CLIN:pathologic_N", colnames(tcga_kirc))
 mc = max.col(tcga_kirc[cols1], ties.method = "first")
 tcga_kirc$Lymph_node_metastasis <- gsub("B:CLIN:pathologic_N_", "", colnames(tcga_kirc[cols1])[mc])
+tcga_kirc$Lymph_node_metastasis <- ifelse(tcga_kirc$Lymph_node_metastasis == "NX", NA, tcga_kirc$Lymph_node_metastasis)
 
 ## CLIN:pathologic_M
 cols1 = grep(pattern = "CLIN:pathologic_M", colnames(tcga_kirc))
 mc = max.col(tcga_kirc[cols1], ties.method = "first")
 tcga_kirc$Organ_metastasis <- gsub("B:CLIN:pathologic_M_", "", colnames(tcga_kirc[cols1])[mc])
+tcga_kirc$Organ_metastasis <- ifelse(tcga_kirc$Organ_metastasis == "MX", NA, tcga_kirc$Organ_metastasis)
 
 ## CLIN:clinical_M
 cols1 = grep(pattern = "CLIN:clinical_M", colnames(tcga_kirc))
@@ -145,7 +147,8 @@ cols1 = grep(pattern = "CLIN:primary_therapy_outcome_success", colnames(tcga_kir
 mc = max.col(tcga_kirc[cols1], ties.method = "first")
 tcga_kirc$therapy_outcome <- gsub("B:CLIN:primary_therapy_outcome_success_", "", colnames(tcga_kirc[cols1])[mc])
 tcga_kirc$therapy_outcome <- ifelse(tcga_kirc$therapy_outcome == "[Unknown]", NA, tcga_kirc$therapy_outcome)
-tcga_kirc <- tcga_kirc %>% mutate(therapy_outcome = factor(therapy_outcome, levels = c("Complete Remission/Response", "Stable Disease", "Progressive Disease", NA)))
+tcga_kirc$therapy_outcome <- ifelse(tcga_kirc$therapy_outcome == "Stable Disease", NA, tcga_kirc$therapy_outcome)
+tcga_kirc <- tcga_kirc %>% mutate(therapy_outcome = factor(therapy_outcome, levels = c("Complete Remission/Response", "Progressive Disease", NA)))
 
 ## CLIN:eastern_cancer_oncology_group
 cols1 = grep(pattern = "CLIN:eastern_cancer_oncology_group", colnames(tcga_kirc))
@@ -211,15 +214,16 @@ tcga_kirc <- tcga_kirc %>% mutate(PLT = factor(PLT, levels = c("Low", "Normal", 
 # Summary
 sapply(tcga_kirc[, c(which( colnames(tcga_kirc)=="Tumor_size" ) : which( colnames(tcga_kirc)=="PLT" ) )], function(x) length(unique(x)))
 sapply(tcga_kirc[, c(which( colnames(tcga_kirc)=="Tumor_size" ) : which( colnames(tcga_kirc)=="PLT" ) )], function(x) unique(x))
-twos = c("gender", "vital_status", "LDH", "ECOG", "Karnofsky", "Age", colnames(df2)[2:ncol(df2)])
-threes = c("Lymph_node_metastasis", "Organ_metastasis", "Organ_metastasis_", "WBC", "therapy_outcome", "smoking_status", "HB", "calcium", "PLT")
-fours = c("Tumor_size", "race", "stage", "grade")
-
+twos = c("gender", "LDH", "ECOG", "Karnofsky", "Age", "Lymph_node_metastasis", "Organ_metastasis",
+         "Age_High", "gender_MALE", "therapy_outcome_Progressive Disease", "ECOG_1", "Lymph_node_metastasis_N1", "Organ_metastasis_M1", "Karnofsky_>80",
+         colnames(df2)[2:ncol(df2)])
+threes = c("WBC", "smoking_status", "HB", "calcium", "PLT")  # "Organ_metastasis_"
+fours = c("Tumor_size", "stage", "grade") #"race"
 
 
 # Convert variables to binary format
 ## Variables to hotencode
-to_hotencode <- tcga_kirc[c("gender", "vital_status", "LDH", "ECOG", "Karnofsky", "Age", threes, fours)]
+to_hotencode <- tcga_kirc[c("gender", "LDH", "ECOG", "Karnofsky", "Age", "Lymph_node_metastasis", "Organ_metastasis", "therapy_outcome", threes, fours)]
 ### k-cluster make one hot encoder
 to_hotencode_var <- dummy_cols(tcga_kirc[colnames(to_hotencode)]) %>%
   dplyr::select(-ends_with("_NA"))
@@ -229,8 +233,7 @@ to_hotencode_var <- dummy_cols(tcga_kirc[colnames(to_hotencode)]) %>%
 #   to_hotencode_var[is.na(to_hotencode_var[,i]), i] = 0
 # }
 ### Remove duplicate binary variables
-to_hotencode_var <- to_hotencode_var %>% dplyr::select(-c(Age_Low, gender_FEMALE, vital_status_Alive, LDH_Normal, ECOG_0, `Karnofsky_≤80`))
-# to_hotencode_var <- to_hotencode_var %>% dplyr::select(-c("gender", "vital_status", "LDH", "ECOG", "Karnofsky", "Age"))
+to_hotencode_var <- to_hotencode_var %>% dplyr::select(-c(Age_Low, gender_FEMALE, `therapy_outcome_Progressive Disease`, Lymph_node_metastasis_N0, Organ_metastasis_M0, LDH_Normal, ECOG_0, `Karnofsky_≤80`))
 to_hotencode_var <- to_hotencode_var %>% dplyr::select(-one_of(colnames(tcga_kirc)))
 to_hotencode_var <- cbind(tcga_kirc %>% dplyr::select(tcga_id), to_hotencode_var)
 ### Join
@@ -251,26 +254,32 @@ tcga_kirc <- tcga_kirc %>%
   dplyr::relocate("neoantigen_num", .after = "TGF-beta_Response") %>%
   dplyr::relocate("indel_num", "immunogenic_indel_num", "numberOfImmunogenicMutation", "Genome_doublings", .after = "Indel_Neoantigens") %>%
   dplyr::rename(Neoantigens = neoantigen_num,
-                ImmunogenicMutations = numberOfImmunogenicMutation,
+                Immunogenic_Mutations = numberOfImmunogenicMutation,
                 Indels = indel_num,
-                Immunogenic_indels = immunogenic_indel_num
+                Immunogenic_Indels = immunogenic_indel_num
   )
 
 
 # Loop over textures
-for (i in 1:3) {
+for (i in 1:4) {
   print(i)
   
   if (i == 1) {
-    # Blood
-    tcga_kirc0 <- tcga_kirc
+    # Blood wo normal
+    tcga_kirc0 <- tcga_kirc %>%
+      dplyr::filter(Normal < 1)
     j = "Blood"; j_name = "Blood"
   } else if (i == 2) {
+    # Blood with normal
+    tcga_kirc0 <- tcga_kirc %>%
+      dplyr::filter(Normal >= 1)
+    j = "Blood"; j_name = "Blood_WithNormal"
+  } else if (i == 3) {
     # Stroma wo normal
     tcga_kirc0 <- tcga_kirc %>%
       dplyr::filter(Normal < 1)
     j = "Stroma"; j_name = "Stroma"
-  } else if (i == 3) {
+  } else if (i == 4) {
     # Stroma with normal
     tcga_kirc0 <- tcga_kirc %>%
       dplyr::filter(Normal >= 1)
@@ -287,23 +296,25 @@ for (i in 1:3) {
   # unique_values_2 = c(unique_values_1, unique_values_2)
   
   # Find variables with 2 values excluding NA
-  unique_values_2 = sapply(tcga_kirc[(findcolnumber(tcga_kirc, Leukocyte_Fraction)):(ncol(tcga_kirc))], function(x) length(unique(x[!is.na(x)])))
+  unique_values_2 = sapply(tcga_kirc0[(findcolnumber(tcga_kirc0, Leukocyte_Fraction)):(ncol(tcga_kirc0))], function(x) length(unique(x[!is.na(x)])))
   unique_values_2 = names(unique_values_2[unique_values_2==2])
   ## Remove character variables
-  nums <- unlist(lapply(tcga_kirc[unique_values_2], is.numeric))
+  nums <- unlist(lapply(tcga_kirc0[unique_values_2], is.numeric))
   unique_values_2 <- unique_values_2[nums]
   ## Remove uninteresting variables
   unique_values_2 <- unique_values_2[-which(unique_values_2 %in% c("Wound_Healing", "Lymphocyte_Infiltration_Signature_Score", "Macrophage_Regulation", "Lymphocytes", "Number_of_Segments", "Fraction_Altered",
                                                                    "BCR_Evenness", "BCR_Shannon", "TCR_Evenness", "TCR_Shannon", "CTA_Score", "Aneuploidy_Score",
+                                                                   "SNV_Neoantigens", "Indel_Neoantigens", "Immunogenic_Indels", "Immunogenic_Mutations", "Silent_Mutation_Rate","Nonsilent_Mutation_Rate","Homologous_Recombination_Defects",
                                                                    "OS_Time", "PFI_Time", "Macrophages_M0", "Mast_Cells", "Mast_Cells_Activated", "Mast_Cells_Resting",
                                                                    "T_Cells_Follicular_Helper", "T_Cells_CD4_Memory_Resting", "B_Cells_Naive",
-                                                                   "Dendritic_Cells_Resting", "Dendritic_Cells_Activated", "Neutrophils_1", "Eosinophils_1",
-                                                                   "HBV", "HCV", "HHV", "HIV", "HPV", "HTLV", "MCV",
+                                                                   "NK_Cells_Resting", "Dendritic_Cells_Resting", "Dendritic_Cells_Activated", "Neutrophils_1", "Eosinophils_1",
+                                                                   "CMV", "EBV", "HBV", "HCV", "HHV", "HIV", "HPV", "HTLV", "MCV",
                                                                    "therapy_outcome_Complete Remission/Response", "therapy_outcome_Stable Disease", "therapy_outcome_Progressive Disease",
-                                                                   "purity", "ploidy","Coverage_for_80_power",
+                                                                   "purity", "ploidy","Coverage_for_80_power", "Genome_doublings",
                                                                    "Cancer_DNA_fraction", "Subclonal_genome_fraction", "numberOfNonSynonymousSNP",
                                                                    "numberOfPeptideTested", "numberOfBindingPMHC", "numberOfBindingExpressedPMHC",
                                                                    "saimiriine_herpesvirus", "AS", "ASprime", "LOH_n_seg", "LOH_frac_altered", "Nrf2_Score"))]
+
   
   # Multiple comparison (two-sided, unpaired, Mann-Whitney U test)
   multiple_t_tests_p_value <- lapply(tcga_kirc0[unique_values_2],
@@ -329,17 +340,14 @@ for (i in 1:3) {
   
   
   # Export data
+  dir.create(paste0("Textures/Images/", j_name)); dir.create(paste0("Textures/Images/", j_name, "/Clinical"));
+  dir.create(paste0("Textures/Images/", j_name, "/Gexp")); dir.create(paste0("Textures/Images/", j_name, "/Mut"));
   writexl::write_xlsx(pvalue_df, paste0("Textures/Images/", j_name, "/Clinical/Table_wilcoxon_clinical.xlsx"))
   
 }
 
 
 ############################# PLOT ##########################################################################################################
-
-
-#################
-##### BLOOD #####
-#################
 
 
 # Balloonplot
@@ -350,11 +358,12 @@ tcga_kirc0 <- tcga_kirc
 
 # Read statistics
 if (exists("pvalue_df0")) {rm(pvalue_df0)}
-for (texture1 in c("Blood", "Stroma", "Stroma_WithNormal")) {
+for (texture1 in c("Blood", "Blood_WithNormal", "Stroma", "Stroma_WithNormal")) {
   pvalue_df <- read_xlsx(paste0("Textures/Images/", texture1, "/Clinical/Table_wilcoxon_clinical.xlsx"))
   pvalue_df$Texture = ifelse(texture1 == "Stroma", "Stroma\nWo Normal",
                              ifelse(texture1 == "Stroma_WithNormal", "Stroma\nWith Normal",
-                                    ifelse(texture1 == "Blood", "Blood", NA)))
+                                    ifelse(texture1 == "Blood_WithNormal", "Blood\nWith Normal",
+                                           ifelse(texture1 == "Blood", "Blood\nWo Normal", NA))))
   if (exists("pvalue_df0")) {
     pvalue_df0 <- rbind(pvalue_df0, pvalue_df)
   } else {
@@ -363,17 +372,9 @@ for (texture1 in c("Blood", "Stroma", "Stroma_WithNormal")) {
 }
 
 
-# # Find variables with 2 values excluding NA
-# unique_values_1 = sapply(tcga_kirc0[colnames(tcga_kirc0) %in% colnames(df2)[2:ncol(df2)]], function(x) length(unique(x[!is.na(x)])))
-# unique_values_1 = names(unique_values_1[unique_values_1==2])
-# unique_values_0 = unique_values_1[c(1:57, 72:81)]
-# unique_values_1 = unique_values_1[-c(1:57, 72:81)]
-# unique_values_2 = sapply(tcga_kirc0[c((b+1):ncol(tcga_kirc0))], function(x) length(unique(x[!is.na(x)])))
-# unique_values_2 = names(unique_values_2[unique_values_2==2])
-
 # Find variables with 2 values excluding NA
-unique_values_0 = unique_values_2[40:85]
-unique_values_1 = unique_values_2[1:39]
+unique_values_0 = unique_values_2[29:62]
+unique_values_1 = unique_values_2[1:28]
 
 
 
@@ -405,7 +406,10 @@ for (unique_value_name in 1:length(list(unique_values_0, unique_values_1))) {
     # Rename
     dplyr::mutate(genes = gsub("herpes", "Herpes", genes),
                   genes = gsub("stage_", "", genes),
-                  genes = gsub("_", " ", genes))
+                  genes = gsub("_", " ", genes),
+                  genes = gsub("gamma", "Gamma", genes),
+                  genes = gsub("delta", "Delta", genes),
+                  genes = gsub("Genome d", "Genome D", genes))
   
   
   # Calculate FC and -log10 P value
@@ -432,46 +436,60 @@ for (unique_value_name in 1:length(list(unique_values_0, unique_values_1))) {
   # Balloonplot
   p <- ggballoonplot(pvalue_df1, x = "Texture", y = "Variables",
                      fill = "FC_log",
-                     size = "neg_log10_p_adj",
+                     # size = "neg_log10_p_adj",
+                     size = "neg_log10_p",
                      # size.range = c(1, 10),
                      ggtheme = theme_bw()) +
     scale_y_discrete(limits = unique(pvalue_df1$Variables)) +
     # scale_size(breaks = c(0, 1, 2, 3), range = c(1, 16), limits = c(1, 16)) +
-    scale_size(breaks = c(exp(0.05), 2, 3), labels = c(0.05,0.01,0.001), range = c(1, 10), limits = c(exp(0.05), max(-log10(0.001), max(pvalue_df1$neg_log10_p_adj, na.rm = TRUE)))) +
-    # scale_size(breaks = c(exp(0.05), 2, 3), labels = c(0.05,0.01,0.001), range = c(1, 10), limits = c(exp(0.05), max(-log10(0.001), max(pvalue_df1$neg_log10_p, na.rm = TRUE)))) +
+    # scale_size(breaks = c(exp(0.05), 2, 3), labels = c(0.05,0.01,0.001), range = c(1, 10), limits = c(exp(0.05), max(-log10(0.001), max(pvalue_df1$neg_log10_p_adj, na.rm = TRUE)))) +
+    scale_size(breaks = c(exp(0.05), 2, 3), labels = c(0.05,0.01,0.001), range = c(1, 10), limits = c(exp(0.05), max(-log10(0.001), max(pvalue_df1$neg_log10_p, na.rm = TRUE)))) +
     # scale_size(breaks = c(0, 1, 2, 3), range = c(1, 10), limits = c(1, max(pvalue_df1$neg_log10_p_adj, na.rm = TRUE))) +
     # ceiling(max(pvalue_df1$neg_log10_p))
     # scale_fill_viridis_c(option = "C") +
     scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
     # gradient_fill(c("blue", "white", "red")) +
-    guides(size = guide_legend(title="AdjP", nrow = 3, title.vjust = 0.5),
-           fill = guide_colorbar(title="LOG10(FC)", title.vjust = 0.75)) +
+    # guides(size = guide_legend(title="AdjP", nrow = 3, title.vjust = 0.5),
+    guides(fill = guide_colorbar(title="LOG10(FC)", title.vjust = 0.75),
+           size = guide_legend(title="P-value", nrow = 3, title.vjust = 0.5)) +
     font("xy.text", size = 10, color = "black", face="plain") +
-    theme(axis.title.y = element_text(size=12, colour="black", face="bold", angle = 90),
+    # theme(axis.title.y = element_text(size=12, colour="black", face="bold", angle = 90),
+    theme(axis.title.y = element_blank(),
+          axis.title.x = element_blank(),
+          # axis.title.x = element_text(size=12, colour="black", face="bold"),
           axis.text.x = element_text(colour="black", face="bold", angle = 45, hjust = 1.0, vjust = 1.0),
-          axis.title.x = element_text(size=12, colour="black", face="bold"),
           axis.text.y = element_text(colour="black"),
           legend.position = "right",
-          # legend.position = c(1.3, 1.3),
+          # legend.position = c(-0.35, -0.1),
           # legend.justification = ,
+          # legend.box = "horizontal",
           legend.direction = "vertical",
           # legend.box="vertical",
-          legend.margin=margin(),
+          # legend.margin=margin(),
           legend.text = element_text(size=12, colour="black", face="bold"),
           legend.title = element_text(size=12, colour="black", face="bold"))
-  p
+  # p
   
-  ggsave(plot = p, filename = paste0("Textures/Images/Texture_balloonplot/Balloonplot_", unique_value_name, ".png"), width = 5, height = nrow(pvalue_df1)/15, units = 'in', dpi = 300)
+  ggsave(plot = p, filename = paste0("Textures/Images/Texture_balloonplot/Balloonplot_", unique_value_name, ".png"), width = 5.5, height = nrow(pvalue_df1)/16, units = 'in', dpi = 300)
   
 }
 
 
 
 
+###########################
+##### BLOOD WO NORMAL #####
+###########################
+
+
+
+# Filter only samples with <1% normal tissue
+tcga_kirc0 <- tcga_kirc %>% dplyr::filter(Normal < 1)
+
 # Scatter plot
 
 # Plot parameters
-a <- max(tcga_kirc$Blood, na.rm=TRUE)
+a <- max(tcga_kirc0$Blood, na.rm=TRUE)
 
 # Filter only variables used in the analyses
 twos <- twos[twos %in% unique_values_2]
@@ -479,11 +497,181 @@ twos <- twos[twos %in% unique_values_2]
 for (two1 in twos) {
   
   # Assign value
-  tcga_kirc$two1 <- as.factor(tcga_kirc[[two1]])
+  tcga_kirc0$two1 <- as.factor(tcga_kirc0[[two1]])
+  
+  if (length(unique(tcga_kirc0$two1[!is.na(tcga_kirc0$two1)])) > 1) {
+    
+    # Filter NAs
+    tcga_kirc1 <- tcga_kirc0 %>%
+      dplyr::filter(!is.na(two1))
+    
+    # Adjust p values
+    pairwise.test = tcga_kirc1 %>%
+      wilcox_test(Blood~two1) %>%
+      adjust_pvalue(method = 'BH') %>%
+      # mutate(p.adj = round(p.adj, 2))
+      mutate(p = ifelse(p < 0.001, "***",
+                        ifelse(p < 0.01, "**",
+                               ifelse(p < 0.05, "*", round(p, 2)))))
+    
+    
+    # Plot
+    g <- ggplot(tcga_kirc1, aes(x = two1, y = Blood)) +
+      geom_jitter(size=5, width = 0.2, aes(fill=two1), shape = 21, color = "black") +
+      geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+      labs(y="Blood proportion (%)", x=ifelse(two1 == "LDH" | two1 == "ECOG", two1, gsub("_", " ", str_to_sentence(two1)))) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size=12, colour = "black"),
+            axis.text.y = element_text(size=12, colour = "black"),
+            axis.title=element_text(size=14, face="bold", colour = "black"),
+            legend.position = "none") +
+      scale_fill_brewer(palette = c("Set1")) +
+      # scale_x_discrete(labels=c("0" = "Low", "1" = "High")) +
+      # stat_compare_means(method = "wilcoxon.test",
+      #                    label.y = 1.0*a,
+      #                    label = "p.signif",
+      #                    bracket.size = 1.0,
+      #                    size = 5) +
+      stat_pvalue_manual(
+        pairwise.test,
+        label = "p",
+        bracket.size = 1.0,
+        size = 5,
+        # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
+        y.position = 1.0*a
+      )
+    ggsave(plot = g, filename = paste0("Textures/Images/Blood/Clinical/Blood_", two1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
+    
+  }
+}
+
+
+for (three1 in threes) {
+  
+  # Assign value
+  tcga_kirc0$three1 <- tcga_kirc0[[three1]]
   
   # Filter NAs
-  tcga_kirc1 <- tcga_kirc %>%
+  tcga_kirc1 <- tcga_kirc0 %>% dplyr::filter(!is.na(three1))
+  
+  if (length(unique(tcga_kirc0$three1[!is.na(tcga_kirc0$three1)])) > 2) {
+    
+    # Adjust p values
+    pairwise.test = tcga_kirc1 %>% 
+      wilcox_test(Blood~three1) %>% 
+      adjust_pvalue(method = 'BH') %>%
+      # mutate(p.adj = round(p.adj, 2))
+      mutate(p.adj = ifelse(p.adj < 0.001, "***",
+                            ifelse(p.adj < 0.01, "**",
+                                   ifelse(p.adj < 0.05, "*", round(p.adj, 2)))))
+    
+    
+    # Plot
+    g <- ggplot(tcga_kirc1, aes(x = three1, y = Blood)) +
+      geom_jitter(size=5, width = 0.2, aes(fill=three1), shape = 21, color = "black") +
+      geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+      labs(y="Blood proportion (%)", x=ifelse(three1 == "HB" | three1 == "PLT" | three1 == "WBC", three1, gsub("_", " ", str_to_sentence(three1)))) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size=12, colour = "black"),
+            axis.text.y = element_text(size=12, colour = "black"),
+            axis.title=element_text(size=14, face="bold", colour = "black"),
+            legend.position = "none") +
+      scale_fill_brewer(palette = c("Set1")) +
+      # scale_x_discrete(labels=c("0" = "Low", "1" = "High")) +
+      stat_compare_means(method = "kruskal.test",
+                         label.y = 1.25*a,
+                         size = 6) +
+      stat_pvalue_manual(
+        pairwise.test,
+        label = "p.adj",
+        bracket.size = 1.0,
+        size = 5,
+        # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
+        y.position = c(1.0*a, 1.12*a, 1.06*a)
+      )
+    ggsave(plot = g, filename = paste0("Textures/Images/Blood/Clinical/Blood_", three1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
+    
+  }
+}
+
+
+for (four1 in fours) {
+  
+  # Assign value
+  tcga_kirc0$four1 <- tcga_kirc0[[four1]]
+  
+  # Filter NAs
+  tcga_kirc1 <- tcga_kirc0 %>% dplyr::filter(!is.na(four1))
+  
+  if (length(unique(tcga_kirc0$four1[!is.na(tcga_kirc0$four1)])) > 3) {
+    
+    # Adjust p values
+    pairwise.test = tcga_kirc1 %>% 
+      wilcox_test(Blood~four1) %>% 
+      adjust_pvalue(method = 'BH') %>%
+      # mutate(p.adj = round(p.adj, 2))
+      mutate(p.adj = ifelse(p.adj < 0.001, "***",
+                            ifelse(p.adj < 0.01, "**",
+                                   ifelse(p.adj < 0.05, "*", round(p.adj, 2)))))
+    
+    
+    # Plot
+    g <- ggplot(tcga_kirc1, aes(x = four1, y = Blood)) +
+      geom_jitter(size=5, width = 0.2, aes(fill=four1), shape = 21, color = "black") +
+      geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+      labs(y="Blood proportion (%)", x=gsub("_", " ", str_to_sentence(four1))) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size=12, colour = "black"),
+            axis.text.y = element_text(size=12, colour = "black"),
+            axis.title=element_text(size=14, face="bold", colour = "black"),
+            legend.position = "none") +
+      scale_fill_brewer(palette = c("Set1")) +
+      # scale_x_discrete(labels=c("0" = "Low", "1" = "High")) +
+      stat_compare_means(method = "kruskal.test",
+                         label.y = 1.45*a,
+                         size = 6) +
+      stat_pvalue_manual(
+        pairwise.test,
+        label = "p.adj",
+        bracket.size = 1.0,
+        size = 5,
+        # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
+        y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
+      )
+    ggsave(plot = g, filename = paste0("Textures/Images/Blood/Clinical/Blood_", four1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
+    
+  }
+  
+}
+
+
+#############################
+##### BLOOD WITH NORMAL #####
+#############################
+
+
+
+# Filter only samples with <1% normal tissue
+tcga_kirc0 <- tcga_kirc %>% dplyr::filter(Normal >= 1)
+
+# Scatter plot
+
+# Plot parameters
+a <- max(tcga_kirc0$Blood, na.rm=TRUE)
+
+# Filter only variables used in the analyses
+twos <- twos[twos %in% unique_values_2]
+
+for (two1 in twos) {
+  
+  # Assign value
+  tcga_kirc0$two1 <- as.factor(tcga_kirc0[[two1]])
+  
+  # Filter NAs
+  tcga_kirc1 <- tcga_kirc0 %>%
     dplyr::filter(!is.na(two1))
+  
+  if (length(unique(tcga_kirc0$two1[!is.na(tcga_kirc0$two1)])) > 1) {
   
   # Adjust p values
   pairwise.test = tcga_kirc1 %>%
@@ -510,28 +698,31 @@ for (two1 in twos) {
     # stat_compare_means(method = "wilcoxon.test",
     #                    label.y = 1.0*a,
     #                    label = "p.signif",
-    #                    bracket.size = 1.5,
+    #                    bracket.size = 1.0,
     #                    size = 5) +
     stat_pvalue_manual(
       pairwise.test,
       label = "p",
-      bracket.size = 1.5,
+      bracket.size = 1.0,
       size = 5,
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = 1.0*a
     )
-  ggsave(plot = g, filename = paste0("Textures/Images/Blood/Clinical/Blood_", two1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Blood_WithNormal/Clinical/Blood_", two1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
   
+  }
 }
 
 
 for (three1 in threes) {
   
   # Assign value
-  tcga_kirc$three1 <- tcga_kirc[[three1]]
+  tcga_kirc0$three1 <- tcga_kirc0[[three1]]
   
   # Filter NAs
-  tcga_kirc1 <- tcga_kirc %>% dplyr::filter(!is.na(three1))
+  tcga_kirc1 <- tcga_kirc0 %>% dplyr::filter(!is.na(three1))
+  
+  if (length(unique(tcga_kirc0$three1[!is.na(tcga_kirc0$three1)])) > 2) {
   
   # Adjust p values
   pairwise.test = tcga_kirc1 %>% 
@@ -561,23 +752,26 @@ for (three1 in threes) {
     stat_pvalue_manual(
       pairwise.test,
       label = "p.adj",
-      bracket.size = 1.5,
+      bracket.size = 1.0,
       size = 5,
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.0*a, 1.12*a, 1.06*a)
     )
-  ggsave(plot = g, filename = paste0("Textures/Images/Blood/Clinical/Blood_", three1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Blood_WithNormal/Clinical/Blood_", three1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
   
+  }
 }
 
 
 for (four1 in fours) {
   
   # Assign value
-  tcga_kirc$four1 <- tcga_kirc[[four1]]
+  tcga_kirc0$four1 <- tcga_kirc0[[four1]]
   
   # Filter NAs
-  tcga_kirc1 <- tcga_kirc %>% dplyr::filter(!is.na(four1))
+  tcga_kirc1 <- tcga_kirc0 %>% dplyr::filter(!is.na(four1))
+  
+  if (length(unique(tcga_kirc0$four1[!is.na(tcga_kirc0$four1)])) > 3) {
   
   # Adjust p values
   pairwise.test = tcga_kirc1 %>% 
@@ -607,13 +801,14 @@ for (four1 in fours) {
     stat_pvalue_manual(
       pairwise.test,
       label = "p.adj",
-      bracket.size = 1.5,
+      bracket.size = 1.0,
       size = 5,
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
     )
-  ggsave(plot = g, filename = paste0("Textures/Images/Blood/Clinical/Blood_", four1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Blood_WithNormal/Clinical/Blood_", four1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
   
+  }
 }
 
 
@@ -666,17 +861,17 @@ for (two1 in twos) {
       # stat_compare_means(method = "wilcoxon.test",
       #                    label.y = 1.0*a,
       #                    label = "p.signif",
-      #                    bracket.size = 1.5,
+      #                    bracket.size = 1.0,
       #                    size = 5) +
       stat_pvalue_manual(
         pairwise.test,
         label = "p",
-        bracket.size = 1.5,
+        bracket.size = 1.0,
         size = 5,
         # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
         y.position = 1.0*a
       )
-    ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Clinical/Stroma_", two1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+    ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Clinical/Stroma_", two1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
     
   }
 }
@@ -720,12 +915,12 @@ for (three1 in threes) {
       stat_pvalue_manual(
         pairwise.test,
         label = "p.adj",
-        bracket.size = 1.5,
+        bracket.size = 1.0,
         size = 5,
         # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
         y.position = c(1.0*a, 1.12*a, 1.06*a)
       )
-    ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Clinical/Stroma_", three1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+    ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Clinical/Stroma_", three1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
     
   }
 }
@@ -769,12 +964,12 @@ for (four1 in fours) {
       stat_pvalue_manual(
         pairwise.test,
         label = "p.adj",
-        bracket.size = 1.5,
+        bracket.size = 1.0,
         size = 5,
         # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
         y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
       )
-    ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Clinical/Stroma_", four1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+    ggsave(plot = g, filename = paste0("Textures/Images/Stroma/Clinical/Stroma_", four1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
     
   }
   
@@ -826,17 +1021,17 @@ for (two1 in twos) {
     # stat_compare_means(method = "wilcoxon.test",
     #                    label.y = 1.0*a,
     #                    label = "p.signif",
-    #                    bracket.size = 1.5,
+    #                    bracket.size = 1.0,
     #                    size = 5) +
     stat_pvalue_manual(
       pairwise.test,
       label = "p",
-      bracket.size = 1.5,
+      bracket.size = 1.0,
       size = 5,
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = 1.0*a
     )
-  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Clinical/Stroma_", two1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Clinical/Stroma_", two1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
   
 }
 
@@ -877,12 +1072,12 @@ for (three1 in threes) {
     stat_pvalue_manual(
       pairwise.test,
       label = "p.adj",
-      bracket.size = 1.5,
+      bracket.size = 1.0,
       size = 5,
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.0*a, 1.12*a, 1.06*a)
     )
-  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Clinical/Stroma_", three1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Clinical/Stroma_", three1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
   
 }
 
@@ -923,12 +1118,12 @@ for (four1 in fours) {
     stat_pvalue_manual(
       pairwise.test,
       label = "p.adj",
-      bracket.size = 1.5,
+      bracket.size = 1.0,
       size = 5,
       # y.position = c(1.12*a, 1.24*a, 1.3*a, 1.0*a, 1.18*a, 1.06*a)
       y.position = c(1.14*a, 1.28*a, 1.35*a, 1.0*a, 1.21*a, 1.07*a)
     )
-  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Clinical/Stroma_", four1, ".png"), width = 7, height = 7, units = 'in', dpi = 300)
+  ggsave(plot = g, filename = paste0("Textures/Images/Stroma_WithNormal/Clinical/Stroma_", four1, ".png"), width = 5, height = 5, units = 'in', dpi = 300)
   
 }
 
@@ -950,6 +1145,8 @@ df2 <- df1 %>%
 colnames(df2) <- gsub("N:SAMP:", "", colnames(df2))
 ## Join
 tcga_kirc1 <- tcga_kirc %>%
+  dplyr::mutate(vital_status_Dead = ifelse(is.na(vital_status_Dead), NA,
+                                           ifelse(vital_status_Dead == "Dead" == 1, 0))) %>%
   dplyr::select(tcga_id, vital_status_Dead, !!textures) %>%
   dplyr::left_join(df2 %>% dplyr::select(tcga_id, OS_Time)) %>%
   distinct(.keep_all = TRUE)

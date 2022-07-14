@@ -34,9 +34,47 @@ tcga_kirc$`margin_texture_stroma_%` <- 100*tcga_kirc$margin_texture_stroma / (tc
 tcga_kirc$`margin_texture_other_%` <- 100*tcga_kirc$margin_texture_other / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_cancer + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 
 
+# Filter samples with >5% cancer normal tissue
 tcga_kirc <- tcga_kirc %>%
   dplyr::filter(`texture_cancer_%` > 5) %>%
   dplyr::mutate(tissue_source_site = gsub("-[[:print:]]{4}", "", gsub("TCGA-", "", tcga_id)))
+
+# Keep only centers with >20 samples
+n <- tcga_kirc %>%
+  group_by(tissue_source_site) %>%
+  summarise(n=n()) %>%
+  dplyr::filter(n>=20) %>%
+  dplyr::filter(!tissue_source_site %in% c("AK")) 
+
+tcga_kirc <- tcga_kirc %>%
+  dplyr::filter(tissue_source_site %in% n$tissue_source_site)
+
+# Filter centers with too much/little lymphocytes than expected
+# 3Z	Mary Bird Perkins Cancer Center - Our Lady of the Lake
+# 6D	University of Oklahoma HSC
+# A3	International Genomics Consortium
+# AK	Fox Chase
+# AS	St. Joseph's Medical Center-(MD)
+# B0	University of Pittsburgh
+# B2	Christiana Healthcare
+# B4	Cureline
+# B8	UNC
+# BP	MSKCC
+# CB	ILSBio
+# CJ	MD Anderson Cancer Center
+# CW	Mayo Clinic - Rochester
+# CZ	Harvard
+# DV	NCI Urologic Oncology Branch
+# EU	CHI-Penrose Colorado
+# G6	Roswell Park
+# GK	ABS - IUPUI
+# MM	BLN - Baylor
+# MW	University of Miami
+# T7	Molecular Response
+# V8	Medical College of Georgia
+# WM	University of Kansas
+
+# Save
 tcga_kirc0 <- tcga_kirc
 
 
@@ -90,7 +128,7 @@ tcga_kirc_nonmargin <- tcga_kirc_long %>%
 tcga_kirc_wide <- tcga_kirc_margin %>%
   full_join(tcga_kirc_nonmargin) %>%
   mutate(FC = Margin/NonMargin,
-         FC = ifelse(FC == "Inf", 10,
+         FC = ifelse(FC == "Inf", (Margin+1)/(NonMargin+1),
                      ifelse(FC > 10, 10,
                             ifelse(FC < 0.1, 0.1, FC))))
 
@@ -106,9 +144,9 @@ tcga_kirc <- tcga_kirc %>%
   pivot_wider(names_from = "rowname", values_from = "col2") %>%
   dplyr::rename(tcga_id = col1)
 
-# Keep only genes with highest var/mean
-a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) abs(var(x, na.rm = TRUE)))
-a <- tail(a[order(a)], 5000)
+# Keep only genes with highest median
+a <- sapply(tcga_kirc[2:ncol(tcga_kirc)], function(x) median(x, na.rm = TRUE) > 8)
+a <- a[a]
 tcga_kirc <- tcga_kirc %>% dplyr::select(tcga_id, one_of(names(a)))
 
 # Join
@@ -218,7 +256,7 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
   
   
   # GSEA
-  Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = log(median1/median2)) %>% dplyr::filter(!is.na(FC) & pvalue<0.05)
+  Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = log(median1/median2)) %>% dplyr::filter(!is.na(FC) & pvalue<0.05 & ((median1+median2)/2)>8)
   # Ranks_tmp <- pvalue_df %>% dplyr::mutate(FC = 1/pvalue) %>% dplyr::filter(!is.na(FC))
   Ranks <- Ranks_tmp %>% dplyr::select(FC)
   Ranks <- setNames(object = Ranks$FC, nm = Ranks_tmp$genes)
@@ -227,7 +265,7 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
                           stats = Ranks,
                           minSize=15,
                           maxSize=500,
-                          nperm=100000)
+                          nperm=10000)
   # top 6 enriched pathways
   head(fgseaRes_blood[order(pval), ])
   

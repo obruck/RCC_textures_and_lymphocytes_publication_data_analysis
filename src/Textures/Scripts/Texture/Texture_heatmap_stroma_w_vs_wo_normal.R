@@ -11,7 +11,7 @@ library(ggplot2)
 library(ComplexHeatmap)
 library(circlize)
 library(RColorBrewer)
-
+library(ggpubr)
 
 
 ############################# LOAD DATA ##########################################################################################################
@@ -23,34 +23,66 @@ stroma_wo_normal_gexp_pathways0 <- readxl::read_xlsx("Textures/Images/Stroma/Gex
 
 # Filter by p
 stroma_w_normal_gexp_pathways <- stroma_w_normal_gexp_pathways0 %>% 
-  dplyr::filter(padj<0.05)
-  # dplyr::mutate(source = "stroma_w_normal")
+  dplyr::filter(padj<0.10) %>%
+  dplyr::mutate(W_NORMAL = ifelse(is.na(NES), 0, NES))
 stroma_wo_normal_gexp_pathways <- stroma_wo_normal_gexp_pathways0 %>% 
-  dplyr::filter(padj<0.05)
-  # dplyr::mutate(source = "stroma_wo_normal")
+  dplyr::filter(padj<0.10) %>%
+  dplyr::mutate(WO_NORMAL = ifelse(is.na(NES), 0, NES))
 
 # Rename variables
 colnames(stroma_wo_normal_gexp_pathways)[2:(ncol(stroma_wo_normal_gexp_pathways))] <- paste0(colnames(stroma_wo_normal_gexp_pathways)[2:(ncol(stroma_wo_normal_gexp_pathways))], "_wo_normal")
+stroma_wo_normal_gexp_pathways = stroma_wo_normal_gexp_pathways %>% dplyr::rename(WO_NORMAL = WO_NORMAL_wo_normal)
 colnames(stroma_w_normal_gexp_pathways)[2:(ncol(stroma_w_normal_gexp_pathways))] <- paste0(colnames(stroma_w_normal_gexp_pathways)[2:(ncol(stroma_w_normal_gexp_pathways))], "_w_normal")
+stroma_w_normal_gexp_pathways = stroma_w_normal_gexp_pathways %>% dplyr::rename(W_NORMAL = W_NORMAL_w_normal)
  
+
+# Select top 5 and last 5 rows by NES value
+stroma_wo_normal_gexp_pathways1 <- stroma_wo_normal_gexp_pathways %>%
+  dplyr::filter(!is.na(WO_NORMAL))
+  # dplyr::arrange(NES_wo_normal) %>%
+  # slice(c(1:5, (n()-4):n()))
+stroma_w_normal_gexp_pathways1 <- stroma_w_normal_gexp_pathways %>%
+  dplyr::filter(!is.na(W_NORMAL))
+  # dplyr::arrange(NES_w_normal) %>%
+  # slice(c(1:5, (n()-4):n()))
+# Do not remove pathways from cancer_gexp_pathways if these are adj<0.10 in normal_gexp_pathways and vice versa
+stroma_wo_normal_gexp_pathways2 <- stroma_wo_normal_gexp_pathways %>%
+  dplyr::filter(!is.na(WO_NORMAL)) %>%
+  dplyr::filter(pathway %in% stroma_w_normal_gexp_pathways1$pathway)
+stroma_w_normal_gexp_pathways2 <- stroma_w_normal_gexp_pathways %>%
+  dplyr::filter(!is.na(W_NORMAL)) %>%
+  dplyr::filter(pathway %in% stroma_wo_normal_gexp_pathways1$pathway)
+
 # Join
-stroma_gexp_pathways <- stroma_w_normal_gexp_pathways %>% full_join(stroma_wo_normal_gexp_pathways)
+stroma_gexp_pathways <- stroma_wo_normal_gexp_pathways1 %>%
+  full_join(stroma_wo_normal_gexp_pathways2) %>%
+  full_join(stroma_w_normal_gexp_pathways1) %>% 
+  full_join(stroma_w_normal_gexp_pathways2)
+stroma_gexp_pathways <- stroma_gexp_pathways %>%
+  group_by(pathway) %>%
+  summarise_all(funs(max), na.rm = TRUE)
+stroma_gexp_pathways[sapply(stroma_gexp_pathways, is.infinite)] <- 0
+
+# Make sure the other is at least adjp<0.05
+stroma_gexp_pathways <- stroma_gexp_pathways %>%
+  dplyr::filter(!(padj_wo_normal==0 & padj_w_normal>0.05)) %>%
+  dplyr::filter(!(padj_w_normal==0 & padj_wo_normal>0.05))
 
 # Fill NES with 0 if NA
-stroma_gexp_pathways <- stroma_gexp_pathways %>%
-  dplyr::mutate(W_NORMAL = ifelse(is.na(NES_w_normal), 0, NES_w_normal),
-                WO_NORMAL = ifelse(is.na(NES_wo_normal), 0, NES_wo_normal))
+# stroma_gexp_pathways <- stroma_gexp_pathways %>%
+#   dplyr::mutate(W_NORMAL = ifelse(is.na(NES_w_normal), 0, NES_w_normal),
+#                 WO_NORMAL = ifelse(is.na(NES_wo_normal), 0, NES_wo_normal))
 
-# Filter pathways that are padj >0.05 but padj<0.10
-stroma_wo_normal_gexp_pathways1 <- stroma_wo_normal_gexp_pathways0 %>%
-  dplyr::filter(padj < 0.10 & padj >= 0.05) %>%
-  dplyr::select(pathway)
-stroma_w_normal_gexp_pathways1 <- stroma_w_normal_gexp_pathways0 %>%
-  dplyr::filter(padj < 0.10 & padj >= 0.05) %>%
-  dplyr::select(pathway)
-exclude1 <- stroma_gexp_pathways %>% dplyr::filter(W_NORMAL == 0) %>% dplyr::select(pathway) %>% dplyr::filter(pathway %in% stroma_w_normal_gexp_pathways1$pathway)
-exclude2 <- stroma_gexp_pathways %>% dplyr::filter(WO_NORMAL == 0) %>% dplyr::select(pathway) %>% dplyr::filter(pathway %in% stroma_wo_normal_gexp_pathways1$pathway)
-stroma_gexp_pathways <- stroma_gexp_pathways %>% dplyr::filter(!pathway %in% c(exclude1$pathway, exclude2$pathway))
+# # Filter pathways that are padj >0.05 but padj<0.10
+# stroma_wo_normal_gexp_pathways1 <- stroma_wo_normal_gexp_pathways0 %>%
+#   dplyr::filter(padj < 0.10 & padj >= 0.05) %>%
+#   dplyr::select(pathway)
+# stroma_w_normal_gexp_pathways1 <- stroma_w_normal_gexp_pathways0 %>%
+#   dplyr::filter(padj < 0.10 & padj >= 0.05) %>%
+#   dplyr::select(pathway)
+# exclude1 <- stroma_gexp_pathways %>% dplyr::filter(W_NORMAL == 0) %>% dplyr::select(pathway) %>% dplyr::filter(pathway %in% stroma_w_normal_gexp_pathways1$pathway)
+# exclude2 <- stroma_gexp_pathways %>% dplyr::filter(WO_NORMAL == 0) %>% dplyr::select(pathway) %>% dplyr::filter(pathway %in% stroma_wo_normal_gexp_pathways1$pathway)
+# stroma_gexp_pathways <- stroma_gexp_pathways %>% dplyr::filter(!pathway %in% c(exclude1$pathway, exclude2$pathway))
 
 
 # Transpose
@@ -59,7 +91,12 @@ stroma_gexp_pathways <- stroma_gexp_pathways %>%
   pivot_longer(cols = c(W_NORMAL, WO_NORMAL), names_to = "col1", values_to = "col2") %>% 
   pivot_wider(names_from = "pathway", values_from = "col2") %>%
   dplyr::rename(Stroma = col1)
-
+stroma_gexp_pathways <- stroma_gexp_pathways %>%
+  dplyr::select(-KEGG_FATTY_ACID_METABOLISM)  # Otherwise 2x FATTY_ACID_METABOLISM
+# Remove REACTOME and KEGG pathways to make the plot visible
+stroma_gexp_pathways <- stroma_gexp_pathways %>%
+  dplyr::select(-starts_with("REACTOME")) %>%
+  dplyr::select(-starts_with("KEGG"))
 
 # Identify FGSEA type
 a <- colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)]
@@ -69,6 +106,7 @@ a = ifelse(str_detect(a, "HALLMARK"), "HALLMARK",
                          ifelse(str_detect(a, "REACTOME"), "REACTOME", 
                                 ifelse(str_detect(a, "chr"), "CHROMOSOME", NA)))))
 
+
 # Rename colnames
 colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("HALLMARK_", "", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
 colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("KEGG_", "", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
@@ -76,6 +114,18 @@ colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("PID_", "",
 colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("REACTOME_", "", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
 colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("CHROMOSOME_", "", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
 colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("TRIACYLGLYCEROL_AND_KETONE_BODY", "TAG & KETONE", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("VALINE", "VAL", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("ISOLEUCINE", "ILE", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("LEUCINE", "LEU", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("ALANINE", "ALA", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("ASPARTATE", "ASP", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("GLUTAMATE", "GLU", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("INTERFERON_GAMMA", "IFNG", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("EPITHELIAL_MESENCHYMAL_TRANSITION", "EMT", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("_CASCADES", "", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("EXTRACELLULAR_MATRIX", "ECM", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("TRANSMEMBRANE_TRANSPORT", "TRANSPORT", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
+colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("GLUCOSE_AND_OTHER_SUGARS_BILE_SALTS_AND_ORGANIC_ACIDS_METAL_IONS_AND_AMINE_COMPOUNDS", "METABOLITES", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
 colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)] <- gsub("_", " ", colnames(stroma_gexp_pathways)[2:ncol(stroma_gexp_pathways)])
 
 
@@ -115,7 +165,7 @@ hm_anno_row <- rowAnnotation(df = anno_row,
                              gp = gpar(col = "black"),
                              width = unit(2, "cm"),
                              # annotation_name_gp = gpar(fontsize=8, fontface="bold"),
-                             annotation_name_gp = gpar(fontface="bold"),
+                             annotation_name_gp = gpar(fontsize = 0, fontface="bold"),
                              annotation_legend_param = list(
                                title_gp = gpar(fontsize = 13, fontface="bold"),
                                labels_gp = gpar(fontsize = 13),
@@ -137,9 +187,9 @@ cols <- colorRampPalette(brewer.pal(11, "RdBu"))(256)
 
 
 # Plot
-png("Textures/Images/Stroma/Stroma_w_vs_wo_normal_heatmap.png", width = 15, height = 6, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
+png("Textures/Images/Stroma/Stroma_w_vs_wo_normal_heatmap.png", width = 8, height = 4, units = 'in', res = 300, pointsize = 12) #original pointsize = 12
 g <- Heatmap(t(stroma_gexp_pathways_hm),
-             width = ncol(stroma_gexp_pathways_hm)*unit(0.35, "mm"), 
+             width = ncol(stroma_gexp_pathways_hm)*unit(0.1, "lines"), 
              top_annotation = hm_anno,
              right_annotation = hm_anno_row,
              col=rev(cols),
@@ -148,6 +198,7 @@ g <- Heatmap(t(stroma_gexp_pathways_hm),
              column_dend_gp = grid::gpar(lwd = 2),
              row_dend_width = unit(1,"cm"),
              row_dend_gp = grid::gpar(lwd = 2),
+             rect_gp = gpar(col = "white", lwd = 2),
              name = "Scale",
              # row_names_gp = gpar(fontsize=5, fontface="bold"),
              row_names_gp = gpar(fontface = "bold"),  # fontsize=7,
