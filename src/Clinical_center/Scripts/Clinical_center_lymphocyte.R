@@ -11,6 +11,7 @@ library(ggplot2)
 library(ComplexHeatmap)
 library(circlize)
 library(RColorBrewer)
+library(ggpubr)
 
 
 ############################# LOAD DATA ##########################################################################################################
@@ -58,7 +59,7 @@ tcga_kirc[textures] <- tcga_kirc[textures]*100
 
 # For loop
 for (texture in textures) {
-  # texture = textures[1]
+  texture = textures[3]
   g <- ggplot(tcga_kirc, aes_string(x="ClinicalCenter", y=texture)) +
     geom_jitter(size=3, width = 0.2, aes(fill=ClinicalCenter), shape = 21, color = "black") +
     geom_boxplot(outlier.shape = NA, alpha = 0.5) +

@@ -11,6 +11,7 @@ library(ggplot2)
 library(ComplexHeatmap)
 library(circlize)
 library(RColorBrewer)
+library(ggpubr)
 
 
 ############################# LOAD DATA ##########################################################################################################
@@ -52,7 +53,11 @@ tcga_kirc <- tcga_kirc %>%
 colnames(tcga_kirc)[grep(pattern = "^texture_[[:print:]]*%", colnames(tcga_kirc))] <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
 textures <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
 
-
+# tcga_kirc %>% 
+#   group_by(ClinicalCenter) %>%
+#   summarise(m = median(Normal)) %>%
+#   arrange(m)
+# sapply(tcga_kirc[textures], quantile)
 
 # For loop
 for (texture in textures) {
