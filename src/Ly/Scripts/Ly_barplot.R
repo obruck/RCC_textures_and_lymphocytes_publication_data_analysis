@@ -167,6 +167,35 @@ ggsave(plot = g, filename = "Clinical_center/Images/TCGA_texture_normalized_ly_c
        width = 8, height = 8, dpi = 300, units = 'in') #original pointsize = 12
 
 
+# Plot2
+tcga_kirc_tmp <- tcga_kirc %>%
+  dplyr::filter(str_detect(ClinicalCenter, "Harvard|International|Anderson|MSKCC|Pittsburgh")) %>%
+  group_by(ClinicalCenter) %>%
+  mutate(Ly_z = factor(ntile(Ly, 2)),
+         ClinicalCenter2=ifelse(str_detect(ClinicalCenter, "Harvard"), 1,
+                                ifelse(str_detect(ClinicalCenter, "International"), 2,
+                                       ifelse(str_detect(ClinicalCenter, "Anderson"), 3,
+                                              ifelse(str_detect(ClinicalCenter, "MSKCC"), 4, 5)))),
+         ClinicalCenter2=factor(ClinicalCenter2)) %>%
+  ungroup()
+
+g <- ggplot(tcga_kirc_tmp, aes(x=ClinicalCenter2, y=Ly)) +
+  geom_jitter(size=3, width = 0.2, aes(fill=Ly_z), shape = 21, color = "black") +
+  geom_boxplot(outlier.shape = NA, alpha = 0.5) +
+  scale_fill_brewer(palette="Set1", direction = -1) +
+  labs(x="Clinical Center", y=paste0("Lymphocyte proportion (%)")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size=12, colour = "black"),
+        # axis.text.y = element_text(size=12, colour = "black"),
+        # axis.title = element_text(size=14, face="bold", colour = "black"),
+        axis.title = element_blank(),
+        axis.text.y = element_blank(),
+        legend.position = "none",
+        plot.margin = margin(0.1, 0.1, 0.1, 0.3, "in"))
+ggsave(plot = g, filename = "Clinical_center/Images/TCGA_texture_normalized_ly_center2.png",
+       width = 4, height = 3, dpi = 300, units = 'in') #original pointsize = 12
+
+
 
 # Melt longer
 tcga_kirc_long <- tcga_kirc %>%
@@ -308,7 +337,8 @@ tcga_kirc_long <- tcga_kirc_long %>%
   dplyr::right_join(tcga_kirc_long) %>%
   dplyr::mutate(Lymphocytes = gsub("Ly_", "", Lymphocytes))
 
-
+  
+  
 # Plot
 g <- ggplot(tcga_kirc_long, aes(x = reorder(ID, -orderid), y = value, fill = Lymphocytes)) +
   geom_bar(stat = "identity") +

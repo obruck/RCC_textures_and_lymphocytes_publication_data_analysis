@@ -346,7 +346,7 @@ pvalue_df <- pvalue_df %>%
 g <- ggplot(pvalue_df, aes(x = median1, y = median2)) +
   geom_point(aes(shape = Pvalue, fill = Texture, size = prop), color = "black") +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
-  labs(x="Median margin:nonmargin lymphocyte ratio in mutated samples", y="Median margin:nonmargin lymphocyte ratio in wild-type samples") +
+  labs(x="Margin:nonmargin lymphocyte ratio if mutated gene", y="Margin:nonmargin lymphocyte ratio if wild-type gene") +
   theme_bw() +
   scale_x_continuous(expand = c(0, 0), limits = c(1, 3.3)) +
   scale_y_continuous(expand = c(0, 0), limits = c(1, 3.3)) +

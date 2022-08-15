@@ -16,7 +16,6 @@ library(ggpubr)
 
 ############################# LOAD DATA ##########################################################################################################
 
-
 # Image data
 tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 
