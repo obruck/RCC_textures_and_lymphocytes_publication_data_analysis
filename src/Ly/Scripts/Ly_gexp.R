@@ -136,6 +136,8 @@ c1$geneset.names <- c(c1$geneset.names, h$geneset.names, c2$geneset.names)
 c1$geneset.descriptions <- c(c1$geneset.descriptions, h$geneset.descriptions, c2$geneset.descriptions)
 pathways <- c1
 
+pathways$geneset.names <- gsub("REACTOME_RESPIRATORY_ELECTRON_TRANSPORT[[:print:]]*", "REACTOME_RESPIRATORY_ELECTRON_TRANSPORT", pathways$geneset.names)
+
 
 
 ############################# PLOT ##########################################################################################################
@@ -154,10 +156,14 @@ findcolnumber <- function(df, thecolumnname){
 ## Save data
 tcga_kirc0 <- tcga_kirc
 
+cor.test(tcga_kirc$Cancer, tcga_kirc$`N:GEXP:GZMA`, method = "spearman")
+cor.test(tcga_kirc$Cancer, tcga_kirc$`N:GEXP:PRF1`, method = "spearman")
+cor.test(tcga_kirc$Cancer, tcga_kirc$`N:GEXP:CD8A`, method = "spearman")
+cor.test(tcga_kirc$Cancer, tcga_kirc$`N:GEXP:GZMK`, method = "spearman")
 
 # Loop gexp analyses over textures
 for (texture1 in textures) {
-  # texture1 = textures[1]
+  # texture1 = textures[2]
   print(texture1)
   
   # Reset data
@@ -248,6 +254,7 @@ for (texture1 in textures) {
                 gseaParam = 0.5)
   dev.off()
   
+  
   # Barplot
   fgseaRes_res2 <- fgseaRes_blood[fgseaRes_blood$pathway %in% topPathways] %>%
     dplyr::mutate(pathway = gsub("_", " ", pathway),
@@ -272,6 +279,7 @@ for (texture1 in textures) {
       # legend.justification = "top",
       # legend.position = c(0.85, 0.1) )
       legend.position = "bottom" )
+  g
   ggsave(plot = g, filename = paste0("Ly/Images/Gexp/", texture1, "_pathways_barplot.png"), width = max(5.5, 5+max(nchar(fgseaRes_res2$pathway))/23), height = max(2, (1+nrow(fgseaRes_res2)/5.5)), units = 'in', dpi = 300)
   
   
@@ -404,8 +412,6 @@ for (texture1 in textures) {
   ggsave(plot = g4, filename = paste0("Ly/Images/Gexp/", texture1, "_gexp_volcano_p00001.png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
-
-
 
 
 

@@ -65,6 +65,8 @@ tcga_kirc <- tcga_kirc %>%
     Normal_Present = ifelse(Normal < "1", "No", "Yes")
   )
 
+quantile(tcga_kirc[tcga_kirc$Normal_Present=="No",]$Cancer)
+quantile(tcga_kirc[tcga_kirc$Normal_Present=="Yes",]$Cancer)
 
 # Plot
 for (texture1 in textures) {

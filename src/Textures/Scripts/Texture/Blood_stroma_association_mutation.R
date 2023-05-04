@@ -54,7 +54,6 @@ findcolnumber <- function(df, thecolumnname){
 # Filter only samples with <1% normal tissue
 tcga_kirc <- tcga_kirc %>% dplyr::filter(Normal < 1)
 
-
 # Select variables
 tcga_kirc <- tcga_kirc %>% dplyr::select(tcga_id, purity, ploidy, contains("cluster"), contains("mutation"), texture_blood:ncol(tcga_kirc))
 

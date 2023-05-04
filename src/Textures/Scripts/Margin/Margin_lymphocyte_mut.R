@@ -21,6 +21,13 @@ tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 tcga_kirc$`texture_normal_%` <- 100*tcga_kirc$texture_normal / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
+
+tcga_kirc$inf_margin_bin_lymphocytes_total <- 100*(tcga_kirc$inf_margin_bin_lymphocytes_blood + tcga_kirc$inf_margin_bin_lymphocytes_normal + tcga_kirc$inf_margin_bin_lymphocytes_stroma + tcga_kirc$inf_margin_bin_lymphocytes_other) /
+  (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
+tcga_kirc$inf_non_margin_bin_lymphocytes_total <- 100*(tcga_kirc$inf_non_margin_bin_lymphocytes_blood + tcga_kirc$inf_non_margin_bin_lymphocytes_normal + tcga_kirc$inf_non_margin_bin_lymphocytes_stroma + tcga_kirc$inf_non_margin_bin_lymphocytes_other) /
+  (tcga_kirc$non_margin_texture_blood + tcga_kirc$non_margin_texture_normal + tcga_kirc$non_margin_texture_stroma + tcga_kirc$non_margin_texture_other)
+
+
 tcga_kirc$`margin_texture_blood_%` <- 100*tcga_kirc$margin_texture_blood / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 tcga_kirc$`margin_texture_normal_%` <- 100*tcga_kirc$margin_texture_normal / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 tcga_kirc$`margin_texture_stroma_%` <- 100*tcga_kirc$margin_texture_stroma / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
@@ -75,10 +82,10 @@ tcga_kirc0 <- tcga_kirc
 
 
 # Rename
-colnames(tcga_kirc)[grep(pattern = "^inf_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other")
-colnames(tcga_kirc)[grep(pattern = "^inf_non_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("NonMargin_Blood", "NonMargin_Cancer", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other")
-margin <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other")
-nonmargin <- c("NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other")
+colnames(tcga_kirc)[grep(pattern = "^inf_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other", "Margin_Total")
+colnames(tcga_kirc)[grep(pattern = "^inf_non_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("NonMargin_Blood", "NonMargin_Cancer", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other", "NonMargin_Total")
+margin <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other", "Margin_Total")
+nonmargin <- c("NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other", "NonMargin_Total")
 
 
 # To percent
@@ -87,7 +94,7 @@ tcga_kirc[nonmargin] <- sapply(tcga_kirc[nonmargin], function(x) 100*x)
 
 # Melt longer
 tcga_kirc_long <- tcga_kirc %>%
-  dplyr::select("tcga_id", "Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other", "NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other") %>%
+  dplyr::select("tcga_id", "Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other", "Margin_Total", "NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other", "NonMargin_Total") %>%
   dplyr::rename("ID" = "tcga_id") %>%
   reshape2::melt() %>%
   arrange(desc(value)) %>%
@@ -349,7 +356,7 @@ g <- ggplot(pvalue_df, aes(x = median1, y = median2)) +
   labs(x="Margin:nonmargin lymphocyte ratio if mutated gene", y="Margin:nonmargin lymphocyte ratio if wild-type gene") +
   theme_bw() +
   scale_x_continuous(expand = c(0, 0), limits = c(1, 3.3)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(1, 3.3)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(1, 5)) +
   theme(axis.text.x = element_text(size=12, colour = "black"),
         axis.text.y = element_text(size=12, colour = "black"),
         axis.title.y = element_text(size=10.5, face="bold", colour = "black"),
@@ -359,7 +366,7 @@ g <- ggplot(pvalue_df, aes(x = median1, y = median2)) +
         legend.key.size = unit(0.01, "cm"),
         legend.margin = margin(),
         legend.spacing.y = unit(0.1, "cm")) +
-  scale_fill_manual(values = c("#e41a1c", "#4daf4a", "#984ea3", "#ff7f00")) +
+  scale_fill_manual(values = c("#e41a1c", "#4daf4a", "#984ea3", "#ff7f00", "white")) +
   scale_shape_manual(values = c(21, 24)) +
   scale_size(breaks = c(10, 30, 50), range = c(1, 10)) +
   guides(fill = guide_legend(override.aes=list(shape=21)),

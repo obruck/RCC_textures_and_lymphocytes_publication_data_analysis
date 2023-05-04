@@ -26,6 +26,7 @@ tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 tcga_kirc$`texture_normal_%` <- 100*tcga_kirc$texture_normal / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
+
 tcga_kirc$`margin_texture_normal_%` <- 100*tcga_kirc$margin_texture_normal / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_cancer + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 tcga_kirc$`margin_texture_blood_%` <- 100*tcga_kirc$margin_texture_blood / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_cancer + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 tcga_kirc$`margin_texture_cancer_%` <- 100*tcga_kirc$margin_texture_cancer / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_cancer + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
@@ -198,7 +199,8 @@ tcga_kirc <- tcga_kirc %>% dplyr::left_join(tcga_kirc0 %>% dplyr::select(ID = tc
 ## Save data
 tcga_kirc0 <- tcga_kirc
 
-for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
+# for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
+for (texture1 in c("All") ) {
   print(texture1)
   
   # Reset data
@@ -435,6 +437,7 @@ for (texture1 in c("All", as.list(unique(tcga_kirc0$Texture))) ) {
   ggsave(plot = g2, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Gexp/", texture1, "_gexp_volcano_p0001.png"), width = 7, height = 7, units = 'in', dpi = 300)
   ggsave(plot = g3, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Gexp/", texture1, "_gexp_volcano_p00005.png"), width = 7, height = 7, units = 'in', dpi = 300)
   ggsave(plot = g4, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Gexp/", texture1, "_gexp_volcano_p00001.png"), width = 7, height = 7, units = 'in', dpi = 300)
+  # ggsave(plot = g4, filename = paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Gexp/", texture1, "_gexp_volcano_p00002.png"), width = 7, height = 7, units = 'in', dpi = 300)
   
 }
 

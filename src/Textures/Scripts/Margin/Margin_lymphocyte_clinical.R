@@ -25,11 +25,18 @@ tcga_kirc <- read_xlsx("../data/image_analysis_results_final.xlsx")
 # Normalize by removing empty
 tcga_kirc$`texture_cancer_%` <- 100*tcga_kirc$texture_cancer / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
 tcga_kirc$`texture_normal_%` <- 100*tcga_kirc$texture_normal / (tcga_kirc$texture_blood + tcga_kirc$texture_cancer + tcga_kirc$texture_normal + tcga_kirc$texture_stroma + tcga_kirc$texture_other)
+
+tcga_kirc$inf_margin_bin_lymphocytes_total <- 100*(tcga_kirc$inf_margin_bin_lymphocytes_blood + tcga_kirc$inf_margin_bin_lymphocytes_normal + tcga_kirc$inf_margin_bin_lymphocytes_stroma + tcga_kirc$inf_margin_bin_lymphocytes_other) /
+  (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
+tcga_kirc$inf_non_margin_bin_lymphocytes_total <- 100*(tcga_kirc$inf_non_margin_bin_lymphocytes_blood + tcga_kirc$inf_non_margin_bin_lymphocytes_normal + tcga_kirc$inf_non_margin_bin_lymphocytes_stroma + tcga_kirc$inf_non_margin_bin_lymphocytes_other) /
+  (tcga_kirc$non_margin_texture_blood + tcga_kirc$non_margin_texture_normal + tcga_kirc$non_margin_texture_stroma + tcga_kirc$non_margin_texture_other)
+
 tcga_kirc$`margin_texture_normal_%` <- 100*tcga_kirc$margin_texture_normal / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_cancer + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 tcga_kirc$`margin_texture_blood_%` <- 100*tcga_kirc$margin_texture_blood / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_cancer + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 tcga_kirc$`margin_texture_cancer_%` <- 100*tcga_kirc$margin_texture_cancer / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_cancer + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 tcga_kirc$`margin_texture_stroma_%` <- 100*tcga_kirc$margin_texture_stroma / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_cancer + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
 tcga_kirc$`margin_texture_other_%` <- 100*tcga_kirc$margin_texture_other / (tcga_kirc$margin_texture_blood + tcga_kirc$margin_texture_cancer + tcga_kirc$margin_texture_normal + tcga_kirc$margin_texture_stroma + tcga_kirc$margin_texture_other)
+
 tcga_kirc$`non_margin_texture_normal_%` <- 100*tcga_kirc$non_margin_texture_normal / (tcga_kirc$non_margin_texture_blood + tcga_kirc$non_margin_texture_cancer + tcga_kirc$non_margin_texture_normal + tcga_kirc$non_margin_texture_stroma + tcga_kirc$non_margin_texture_other)
 tcga_kirc$`non_margin_texture_blood_%` <- 100*tcga_kirc$non_margin_texture_blood / (tcga_kirc$non_margin_texture_blood + tcga_kirc$non_margin_texture_cancer + tcga_kirc$non_margin_texture_normal + tcga_kirc$non_margin_texture_stroma + tcga_kirc$non_margin_texture_other)
 tcga_kirc$`non_margin_texture_cancer_%` <- 100*tcga_kirc$non_margin_texture_cancer / (tcga_kirc$non_margin_texture_blood + tcga_kirc$non_margin_texture_cancer + tcga_kirc$non_margin_texture_normal + tcga_kirc$non_margin_texture_stroma + tcga_kirc$non_margin_texture_other)
@@ -86,10 +93,10 @@ tcga_kirc0 <- tcga_kirc
 
 
 # Rename
-colnames(tcga_kirc)[grep(pattern = "^inf_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other")
-colnames(tcga_kirc)[grep(pattern = "^inf_non_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("NonMargin_Blood", "NonMargin_Cancer", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other")
-margin <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other")
-nonmargin <- c("NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other")
+colnames(tcga_kirc)[grep(pattern = "^inf_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other", "Margin_Total")
+colnames(tcga_kirc)[grep(pattern = "^inf_non_margin_bin_lymphocytes", colnames(tcga_kirc))] <- c("NonMargin_Blood", "NonMargin_Cancer", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other", "NonMargin_Total")
+margin <- c("Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other", "Margin_Total")
+nonmargin <- c("NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other", "NonMargin_Total")
 textures <- c(margin, nonmargin)
 
 
@@ -304,7 +311,7 @@ tcga_kirc[textures] <- sapply(tcga_kirc[textures], function(x) 100*x)
 
 # Melt longer
 tcga_kirc_long <- tcga_kirc %>%
-  dplyr::select("tcga_id", "Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other", "NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other") %>%
+  dplyr::select("tcga_id", "Margin_Blood", "Margin_Normal", "Margin_Stroma", "Margin_Other", "Margin_Total", "NonMargin_Blood", "NonMargin_Normal", "NonMargin_Stroma", "NonMargin_Other", "NonMargin_Total") %>%
   # dplyr::rename("ID" = "tcga_id") %>%
   reshape2::melt() %>%
   arrange(desc(value)) %>%
@@ -687,7 +694,7 @@ tcga_kirc0 <- tcga_kirc
 
 # Read statistics
 if (exists("pvalue_df0")) {rm(pvalue_df0)}
-for (texture1 in c("Blood", "Stroma", "Normal", "Other")) {
+for (texture1 in c("Blood", "Stroma", "Normal", "Other", "Total")) {
   pvalue_df <- read_xlsx(paste0("Textures/Images/Margin/Margin_vs_non_margin/Ly/Clinical/Ly_in_margin_vs_nonmargin_", texture1, "_clinical.xlsx"))
   pvalue_df$Texture = texture1
   if (exists("pvalue_df0")) {

@@ -48,16 +48,25 @@ tcga_kirc <- tcga_kirc %>%
 
 ############################# PLOT ##########################################################################################################
 
-
 # Rename
 colnames(tcga_kirc)[grep(pattern = "^texture_[[:print:]]*%", colnames(tcga_kirc))] <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
 textures <- c("Blood", "Cancer", "Normal", "Stroma", "Other")
 
-# tcga_kirc %>% 
-#   group_by(ClinicalCenter) %>%
-#   summarise(m = median(Normal)) %>%
-#   arrange(m)
-# sapply(tcga_kirc[textures], quantile)
+
+tcga_kirc %>%
+  group_by(ClinicalCenter) %>%
+  summarise(m = median(Cancer)) %>%
+  arrange(m)
+tcga_kirc %>%
+  group_by(ClinicalCenter) %>%
+  summarise(m = median(Normal)) %>%
+  arrange(m)
+sapply(tcga_kirc[textures], quantile)
+
+tcga_kirc %>%
+  filter(Cancer>50) %>%
+  nrow()
+
 
 # For loop
 for (texture in textures) {

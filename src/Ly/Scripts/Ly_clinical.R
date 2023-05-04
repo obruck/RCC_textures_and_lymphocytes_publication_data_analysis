@@ -362,17 +362,17 @@ for (texture1 in textures) {
   unique_values_2_imm <- unique_values_2_imm[nums]
   ## Remove uninteresting variables
   unique_values_2_imm <- unique_values_2_imm[-which(unique_values_2_imm %in% c("Wound_Healing", "Lymphocyte_Infiltration_Signature_Score", "Macrophage_Regulation", "Lymphocytes", "Number_of_Segments", "Fraction_Altered",
-                                                                   "BCR_Evenness", "BCR_Shannon", "TCR_Evenness", "TCR_Shannon", "CTA_Score", "Aneuploidy_Score",
-                                                                   "SNV_Neoantigens", "Indel_Neoantigens", "Immunogenic_Indels", "Immunogenic_Mutations", "Silent_Mutation_Rate","Nonsilent_Mutation_Rate","Homologous_Recombination_Defects",
-                                                                   "OS_Time", "PFI_Time", "Macrophages_M0", "Mast_Cells", "Mast_Cells_Activated", "Mast_Cells_Resting",
-                                                                   "T_Cells_Follicular_Helper", "T_Cells_CD4_Memory_Resting", "B_Cells_Naive",
-                                                                   "NK_Cells_Resting", "Dendritic_Cells_Resting", "Dendritic_Cells_Activated", "Neutrophils_1", "Eosinophils_1",
-                                                                   "CMV", "EBV", "HBV", "HCV", "HHV", "HIV", "HPV", "HTLV", "MCV",
-                                                                   "therapy_outcome_Complete Remission/Response", "therapy_outcome_Stable Disease", "therapy_outcome_Progressive Disease",
-                                                                   "purity", "ploidy","Coverage_for_80_power", "Genome_doublings",
-                                                                   "Cancer_DNA_fraction", "Subclonal_genome_fraction", "numberOfNonSynonymousSNP",
-                                                                   "numberOfPeptideTested", "numberOfBindingPMHC", "numberOfBindingExpressedPMHC",
-                                                                   "saimiriine_herpesvirus", "AS", "ASprime", "LOH_n_seg", "LOH_frac_altered", "Nrf2_Score"))]
+                                                                               "BCR_Evenness", "BCR_Shannon", "TCR_Evenness", "TCR_Shannon", "CTA_Score", "Aneuploidy_Score",
+                                                                               "SNV_Neoantigens", "Indel_Neoantigens", "Immunogenic_Indels", "Immunogenic_Mutations", "Silent_Mutation_Rate","Nonsilent_Mutation_Rate","Homologous_Recombination_Defects",
+                                                                               "OS_Time", "PFI_Time", "Macrophages_M0", "Mast_Cells", "Mast_Cells_Activated", "Mast_Cells_Resting",
+                                                                               "T_Cells_Follicular_Helper", "T_Cells_CD4_Memory_Resting", "B_Cells_Naive",
+                                                                               "NK_Cells_Resting", "Dendritic_Cells_Resting", "Dendritic_Cells_Activated", "Neutrophils_1", "Eosinophils_1",
+                                                                               "CMV", "EBV", "HBV", "HCV", "HHV", "HIV", "HPV", "HTLV", "MCV",
+                                                                               "therapy_outcome_Complete Remission/Response", "therapy_outcome_Stable Disease", "therapy_outcome_Progressive Disease",
+                                                                               "purity", "ploidy","Coverage_for_80_power", "Genome_doublings",
+                                                                               "Cancer_DNA_fraction", "Subclonal_genome_fraction", "numberOfNonSynonymousSNP",
+                                                                               "numberOfPeptideTested", "numberOfBindingPMHC", "numberOfBindingExpressedPMHC",
+                                                                               "saimiriine_herpesvirus", "AS", "ASprime", "LOH_n_seg", "LOH_frac_altered", "Nrf2_Score"))]
   
   
   # Multiple comparison (two-sided, unpaired, Mann-Whitney U test)
@@ -531,17 +531,17 @@ for (texture1 in textures) {
   unique_values_2_cli <- unique_values_2_cli[nums]
   ## Remove uninteresting variables
   unique_values_2_cli <- unique_values_2_cli[-which(unique_values_2_cli %in% c("Wound_Healing", "Lymphocyte_Infiltration_Signature_Score", "Macrophage_Regulation", "Lymphocytes", "Number_of_Segments", "Fraction_Altered",
-                                                                   "BCR_Evenness", "BCR_Shannon", "TCR_Evenness", "TCR_Shannon", "CTA_Score", "Aneuploidy_Score",
-                                                                   "SNV_Neoantigens", "Indel_Neoantigens", "Immunogenic_Indels", "Immunogenic_Mutations", "Silent_Mutation_Rate","Nonsilent_Mutation_Rate","Homologous_Recombination_Defects",
-                                                                   "OS_Time", "PFI_Time", "Macrophages_M0", "Mast_Cells", "Mast_Cells_Activated", "Mast_Cells_Resting",
-                                                                   "T_Cells_Follicular_Helper", "T_Cells_CD4_Memory_Resting", "B_Cells_Naive",
-                                                                   "NK_Cells_Resting", "Dendritic_Cells_Resting", "Dendritic_Cells_Activated", "Neutrophils_1", "Eosinophils_1",
-                                                                   "CMV", "EBV", "HBV", "HCV", "HHV", "HIV", "HPV", "HTLV", "MCV",
-                                                                   "therapy_outcome_Complete Remission/Response", "therapy_outcome_Stable Disease", "therapy_outcome_Progressive Disease",
-                                                                   "purity", "ploidy","Coverage_for_80_power",
-                                                                   "Cancer_DNA_fraction", "Subclonal_genome_fraction", "numberOfNonSynonymousSNP",
-                                                                   "numberOfPeptideTested", "numberOfBindingPMHC", "numberOfBindingExpressedPMHC",
-                                                                   "saimiriine_herpesvirus", "AS", "ASprime", "LOH_n_seg", "LOH_frac_altered", "Nrf2_Score"))]
+                                                                               "BCR_Evenness", "BCR_Shannon", "TCR_Evenness", "TCR_Shannon", "CTA_Score", "Aneuploidy_Score",
+                                                                               "SNV_Neoantigens", "Indel_Neoantigens", "Immunogenic_Indels", "Immunogenic_Mutations", "Silent_Mutation_Rate","Nonsilent_Mutation_Rate","Homologous_Recombination_Defects",
+                                                                               "OS_Time", "PFI_Time", "Macrophages_M0", "Mast_Cells", "Mast_Cells_Activated", "Mast_Cells_Resting",
+                                                                               "T_Cells_Follicular_Helper", "T_Cells_CD4_Memory_Resting", "B_Cells_Naive",
+                                                                               "NK_Cells_Resting", "Dendritic_Cells_Resting", "Dendritic_Cells_Activated", "Neutrophils_1", "Eosinophils_1",
+                                                                               "CMV", "EBV", "HBV", "HCV", "HHV", "HIV", "HPV", "HTLV", "MCV",
+                                                                               "therapy_outcome_Complete Remission/Response", "therapy_outcome_Stable Disease", "therapy_outcome_Progressive Disease",
+                                                                               "purity", "ploidy","Coverage_for_80_power",
+                                                                               "Cancer_DNA_fraction", "Subclonal_genome_fraction", "numberOfNonSynonymousSNP",
+                                                                               "numberOfPeptideTested", "numberOfBindingPMHC", "numberOfBindingExpressedPMHC",
+                                                                               "saimiriine_herpesvirus", "AS", "ASprime", "LOH_n_seg", "LOH_frac_altered", "Nrf2_Score"))]
   
   
   # Multiple comparison (chisq test)
@@ -588,52 +588,57 @@ for (texture1 in textures) {
   
   tmp = data.frame(twos = unique_values_2_cli)
   
-  for (i in vars$genes) {
-    a <- tmp %>% dplyr::filter(str_detect(twos, i))
-    ## Join
-    if (!exists("b")) {
-      b <- data.frame(a)
-    } else {
-      b <- rbind(b, a)
+  if (nrow(vars) > 0) {
+    
+    for (i in vars$genes) {
+      a <- tmp %>% dplyr::filter(str_detect(twos, i))
+      ## Join
+      if (!exists("b")) {
+        b <- data.frame(a)
+      } else {
+        b <- rbind(b, a)
+      }
     }
-  }
-  a <- b; rm(b)
-  ## Remove NA
-  a <- a %>% dplyr::filter(!is.na(twos))
-  b <- as.character(a$twos)
-  
-  
-  # Plot
-  for (two1 in b) {
-    # two1 = b[1]
+    a <- b; rm(b)
+    ## Remove NA
+    a <- a %>%
+      dplyr::filter(!is.na(twos))
+    b <- as.character(a$twos)
     
-    # Reset data
-    tcga_kirc1 <- tcga_kirc
     
-    # Assign value
-    tcga_kirc1$two1 <- ifelse(tcga_kirc1[[two1]] == 1, TRUE,
-                              ifelse(tcga_kirc1[[two1]] == 0, FALSE, NA))
-    
-    # Filter NAs
-    tcga_kirc1 <- tcga_kirc1 %>%
-      dplyr::filter(!is.na(two1)) %>%
-      dplyr::mutate(two1 = as.factor(two1),
-                    FC = factor(FC, levels = c("Low", "High")))
-    
-    # Barplot
-    g <- sjp.xtab(
-      tcga_kirc1$FC,
-      tcga_kirc1$two1,
-      show.total = FALSE,
-      margin = "row",
-      # bar.pos = "stack",
-      bar.pos = "dodge",
-      show.summary = TRUE,
-      geom.colors=c("#1B9E77", "#D95F02"),
-      axis.titles=c(paste0("Lymphocyte proportion in ", texture1), toupper(gsub("_mutation", "", two1))),
-      legend.title="")
-    
-    ggsave(plot = g, filename = paste0("Ly/Images/Clinical/", texture1, "/Ly_", gsub(">", "", two1), "_", texture1, "_clin_barplot.png"), width = 4, height = 4.5, units = 'in', dpi = 300)
+    # Plot
+    for (two1 in b) {
+      # two1 = b[1]
+      
+      # Reset data
+      tcga_kirc1 <- tcga_kirc
+      
+      # Assign value
+      tcga_kirc1$two1 <- ifelse(tcga_kirc1[[two1]] == 1, TRUE,
+                                ifelse(tcga_kirc1[[two1]] == 0, FALSE, NA))
+      
+      # Filter NAs
+      tcga_kirc1 <- tcga_kirc1 %>%
+        dplyr::filter(!is.na(two1)) %>%
+        dplyr::mutate(two1 = as.factor(two1),
+                      FC = factor(FC, levels = c("Low", "High")))
+      
+      # Barplot
+      g <- sjp.xtab(
+        tcga_kirc1$FC,
+        tcga_kirc1$two1,
+        show.total = FALSE,
+        margin = "row",
+        # bar.pos = "stack",
+        bar.pos = "dodge",
+        show.summary = TRUE,
+        geom.colors=c("#1B9E77", "#D95F02"),
+        axis.titles=c(paste0("Lymphocyte proportion in ", texture1), toupper(gsub("_mutation", "", two1))),
+        legend.title="")
+      
+      ggsave(plot = g, filename = paste0("Ly/Images/Clinical/", texture1, "/Ly_", gsub(">", "", two1), "_", texture1, "_clin_barplot.png"), width = 4, height = 4.5, units = 'in', dpi = 300)
+      
+    }
     
   }
   

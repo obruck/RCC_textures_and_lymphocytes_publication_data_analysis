@@ -1145,8 +1145,8 @@ df2 <- df1 %>%
 colnames(df2) <- gsub("N:SAMP:", "", colnames(df2))
 ## Join
 tcga_kirc1 <- tcga_kirc %>%
-  dplyr::mutate(vital_status_Dead = ifelse(is.na(vital_status_Dead), NA,
-                                           ifelse(vital_status_Dead == "Dead" == 1, 0))) %>%
+  dplyr::mutate(vital_status_Dead = ifelse(is.na(vital_status), NA,
+                                           ifelse(vital_status == "Dead", 1, 0))) %>%
   dplyr::select(tcga_id, vital_status_Dead, !!textures) %>%
   dplyr::left_join(df2 %>% dplyr::select(tcga_id, OS_Time)) %>%
   distinct(.keep_all = TRUE)

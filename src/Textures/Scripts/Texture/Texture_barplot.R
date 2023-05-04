@@ -57,11 +57,12 @@ tcga_kirc_long <- tcga_kirc_long %>%
   dplyr::select(ID, orderid) %>%
   dplyr::right_join(tcga_kirc_long)
 
+
 # Plot
 g <- ggplot(tcga_kirc_long, aes(x = reorder(ID, -orderid), y = value, fill = Texture)) +
   geom_bar(stat = "identity") +
   labs(y="Proportion (%)") +
-  scale_y_continuous(limits = c(0,100), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0,100.1), expand = c(0, 0)) +
   scale_fill_brewer(palette="Set1") +
   # scale_fill_manual(values=c("#4daf4a", "#e41a1c", "#a6cee3", "#984ea3", "#ffff33")) +
   theme_bw() +
