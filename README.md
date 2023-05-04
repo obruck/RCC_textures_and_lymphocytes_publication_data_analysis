@@ -17,7 +17,7 @@ These codes will help you reproduce all plots and statistical analyses of the pu
 ### Instructions if you operate with RStudio
 1. Install RStudio (the analyses here have been made with the version 3.5.1)
 2. Install necessary R packages either by running the Rscript `./src/install_packages.R`
-3. Run the analyses at once by running the Rscript `./environment/main.R`. This will
+3. Run the analyses at once by running the Rscript `./src/main.R`. This will
 - preprocessed data files are found in `./data/`
 - produce tables and images in `./src/path/Images/`
 
