@@ -9,7 +9,7 @@ These codes will help you reproduce all plots and statistical analyses of the pu
 
 ## USEFUL LINKS
 **[CODE](https://github.com/vahvero/RCC_textures_and_lymphocytes_publication_image_analysis)** &emsp; &emsp; &emsp; &emsp; &nbsp; &nbsp; The image analysis pipelines to reproduce the texture and lymphocyte data.  
-**[DATA](https://zenodo.org/deposit/6528599)** &emsp; &emsp; &emsp; &emsp; &emsp; The annotated texture and lymphocyte image data are located in Zenodo.  
+**[DATA](https://zenodo.org/record/7898308#.ZFSnZexBxTY)** &emsp; &emsp; &emsp; &emsp; &emsp; The annotated texture and lymphocyte image data are located in Zenodo.  
 **[VISUALIZATION](http://hruh-20.it.helsinki.fi/rcc_texture_lymphocytes/)** &emsp; &nbsp;The TissUUmaps platform to visualize and assess the results of the image analysis pipelines.
 
 
